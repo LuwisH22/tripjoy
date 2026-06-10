@@ -15,13 +15,22 @@ import {
   itineraryDetail as seedDays,
   expenses as seedExpenses,
   notes as seedNotes,
+  trip as seedTrip,
   type Traveler,
   type ItineraryDay,
   type Expense,
   type Note,
 } from "@/lib/data";
 
+export type TripInfo = {
+  destination: string;
+  dates: string;
+  days: number;
+  image: string;
+};
+
 export type TripState = {
+  trip: TripInfo;
   travelers: Traveler[];
   days: ItineraryDay[];
   expenses: Expense[];
@@ -33,6 +42,12 @@ export type TripState = {
 
 function defaultState(): TripState {
   return {
+    trip: {
+      destination: seedTrip.destination,
+      dates: seedTrip.dates,
+      days: seedTrip.days,
+      image: seedTrip.image,
+    },
     travelers: seedTravelers,
     days: seedDays,
     expenses: seedExpenses,
@@ -82,6 +97,7 @@ type TripData = {
   setSavings: (v: Upd<number>) => void;
   setBudgetTotal: (v: Upd<number>) => void;
   setSavingsGoal: (v: Upd<number>) => void;
+  setTrip: (v: Upd<TripInfo>) => void;
   // convenience for components that read travelers directly
   travelers: Traveler[];
 };
@@ -220,6 +236,7 @@ export function TripDataProvider({ children }: { children: React.ReactNode }) {
       setState((s) => ({ ...s, budgetTotal: resolve(v, s.budgetTotal) })),
     setSavingsGoal: (v) =>
       setState((s) => ({ ...s, savingsGoal: resolve(v, s.savingsGoal) })),
+    setTrip: (v) => setState((s) => ({ ...s, trip: resolve(v, s.trip) })),
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

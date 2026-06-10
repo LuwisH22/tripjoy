@@ -5,14 +5,17 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowRight, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
-import { itinerary } from "@/lib/data";
 import { Star } from "./ui/Doodles";
 import { useAuth } from "./auth/AuthProvider";
+import { useTripData } from "./trip/TripDataProvider";
 
 export function ItineraryTimeline() {
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { guard } = useAuth();
+  const { state } = useTripData();
+  const itinerary = state.days;
+  const place = state.trip.destination.split(",")[0] || "Trip";
 
   const scroll = (dir: number) => {
     ref.current?.scrollBy({ left: dir * 320, behavior: "smooth" });
@@ -76,16 +79,22 @@ export function ItineraryTimeline() {
               </p>
 
               <div className="relative mt-2 overflow-hidden rounded-xl2">
-                <img
-                  src={d.image}
-                  alt={d.title}
-                  className="h-24 w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
+                {d.image ? (
+                  <img
+                    src={d.image}
+                    alt={d.title}
+                    className="h-24 w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                ) : (
+                  <div className="grid h-24 w-full place-items-center bg-brand-cream text-3xl">
+                    {d.icon}
+                  </div>
+                )}
                 <Star className="absolute right-1 top-1 w-5 opacity-0 transition group-hover:opacity-100" />
               </div>
 
               <div className="mt-2 flex items-center gap-1 text-xs font-semibold text-muted">
-                <MapPin className="h-3.5 w-3.5 text-brand-pink" /> Bali
+                <MapPin className="h-3.5 w-3.5 text-brand-pink" /> {place}
               </div>
             </motion.article>
           ))}

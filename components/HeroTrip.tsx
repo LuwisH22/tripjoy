@@ -2,13 +2,25 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, Plane } from "lucide-react";
-import { trip } from "@/lib/data";
-import { travelers } from "@/lib/data";
+import { ArrowRight, Image as ImageIcon, Plane } from "lucide-react";
+import { useTripData } from "@/components/trip/TripDataProvider";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { Sticker } from "./ui/Sticker";
 import { Heart, PlanePath } from "./ui/Doodles";
+import { InitialAvatar } from "./ui/InitialAvatar";
 
 export function HeroTrip() {
+  const { state, travelers, setTrip } = useTripData();
+  const { isAdmin } = useAuth();
+  const trip = state.trip;
+
+  const onPhoto = (file?: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setTrip((t) => ({ ...t, image: reader.result as string }));
+    reader.readAsDataURL(file);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -18,39 +30,85 @@ export function HeroTrip() {
     >
       <PlanePath className="pointer-events-none absolute right-6 top-2 hidden w-44 opacity-80 lg:block" />
 
-      <div className="relative h-48 w-full shrink-0 overflow-hidden rounded-xl2 md:h-auto md:w-72">
+      <div className="group relative h-48 w-full shrink-0 overflow-hidden rounded-xl2 md:h-auto md:w-72">
         <img
           src={trip.image}
           alt={trip.destination}
           className="h-full w-full object-cover"
         />
         <Heart className="absolute right-3 top-3 w-6 drop-shadow" />
+        {isAdmin && (
+          <label className="absolute bottom-2 left-2 cursor-pointer rounded-full bg-white/90 px-3 py-1.5 text-xs font-bold text-ink shadow-soft opacity-0 transition group-hover:opacity-100">
+            <ImageIcon className="mr-1 inline h-3.5 w-3.5" /> Change photo
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => onPhoto(e.target.files?.[0])}
+            />
+          </label>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col">
         <span className="w-fit rounded-full bg-brand-yellow px-3 py-1 text-xs font-bold uppercase tracking-wide text-ink">
           Upcoming Trip
         </span>
-        <h2 className="mt-3 flex items-center gap-2 font-heading text-3xl font-bold text-ink">
-          {trip.destination} <span className="text-2xl">🌴</span>
-        </h2>
-        <p className="mt-1 text-sm font-semibold text-muted">
-          {trip.dates} &nbsp;•&nbsp; {trip.days} Days
-        </p>
+
+        {isAdmin ? (
+          <input
+            value={trip.destination}
+            onChange={(e) =>
+              setTrip((t) => ({ ...t, destination: e.target.value }))
+            }
+            placeholder="Where to? 🌍"
+            className="mt-3 w-full rounded-lg font-heading text-3xl font-bold text-ink outline-none focus:bg-brand-cream"
+          />
+        ) : (
+          <h2 className="mt-3 flex items-center gap-2 font-heading text-3xl font-bold text-ink">
+            {trip.destination} <span className="text-2xl">🌴</span>
+          </h2>
+        )}
+
+        {isAdmin ? (
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm font-semibold text-muted">
+            <input
+              value={trip.dates}
+              onChange={(e) => setTrip((t) => ({ ...t, dates: e.target.value }))}
+              placeholder="25 June – 2 July 2024"
+              className="rounded bg-transparent outline-none focus:bg-brand-cream"
+            />
+            <span>•</span>
+            <input
+              type="number"
+              value={trip.days}
+              onChange={(e) =>
+                setTrip((t) => ({ ...t, days: Number(e.target.value) || 0 }))
+              }
+              className="w-12 rounded bg-transparent text-center outline-none focus:bg-brand-cream"
+            />
+            <span>Days</span>
+          </div>
+        ) : (
+          <p className="mt-1 text-sm font-semibold text-muted">
+            {trip.dates} &nbsp;•&nbsp; {trip.days} Days
+          </p>
+        )}
 
         <div className="mt-4 flex items-center gap-4">
           <div className="flex -space-x-3">
             {travelers.slice(0, 3).map((t) => (
-              <img
+              <InitialAvatar
                 key={t.name}
-                src={t.avatar}
-                alt={t.name}
-                className="h-9 w-9 rounded-full border-2 border-white object-cover"
+                name={t.name}
+                className="h-9 w-9 border-2 border-white text-sm"
               />
             ))}
-            <span className="grid h-9 w-9 place-items-center rounded-full border-2 border-white bg-brand-mint text-xs font-bold text-white">
-              +2
-            </span>
+            {travelers.length > 3 && (
+              <span className="grid h-9 w-9 place-items-center rounded-full border-2 border-white bg-brand-mint text-xs font-bold text-white">
+                +{travelers.length - 3}
+              </span>
+            )}
           </div>
         </div>
 
