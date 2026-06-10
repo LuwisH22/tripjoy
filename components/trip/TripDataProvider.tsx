@@ -39,6 +39,30 @@ function defaultState(): TripState {
   };
 }
 
+/** Make the "You" traveler reflect the logged-in account (name + email). */
+function personalize(
+  s: TripState,
+  user: { name: string; email: string } | null
+): TripState {
+  if (!user) return s;
+  const hasYou = s.travelers.some((t) => t.status === "You");
+  let travelers = s.travelers.map((t) =>
+    t.status === "You" ? { ...t, name: user.name } : t
+  );
+  if (!hasYou) {
+    travelers = [
+      {
+        name: user.name,
+        role: "Trip Planner",
+        status: "You" as const,
+        avatar: "",
+      },
+      ...travelers,
+    ];
+  }
+  return { ...s, travelers };
+}
+
 type Upd<T> = T | ((prev: T) => T);
 
 type TripData = {
@@ -98,9 +122,11 @@ export function TripDataProvider({ children }: { children: React.ReactNode }) {
         if (cancelled) return;
 
         if (!error && data?.data && Object.keys(data.data).length) {
-          setState({ ...defaultState(), ...(data.data as TripState) });
+          setState(
+            personalize({ ...defaultState(), ...(data.data as TripState) }, user)
+          );
         } else {
-          const fresh = defaultState();
+          const fresh = personalize(defaultState(), user);
           setState(fresh);
           // seed a row for this user
           await supabase.from("trip_data").upsert({
@@ -114,9 +140,14 @@ export function TripDataProvider({ children }: { children: React.ReactNode }) {
         // local mode
         try {
           const raw = localStorage.getItem(LOCAL_KEY);
-          setState(raw ? { ...defaultState(), ...JSON.parse(raw) } : defaultState());
+          setState(
+            personalize(
+              raw ? { ...defaultState(), ...JSON.parse(raw) } : defaultState(),
+              user
+            )
+          );
         } catch {
-          setState(defaultState());
+          setState(personalize(defaultState(), user));
         }
       }
 
