@@ -9,19 +9,24 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          yellow: "#FFD166",
-          pink: "#FF8FA3",
-          sky: "#6EC6FF",
-          mint: "#7BD389",
-          soft: "#B9E7FF",
-          cream: "#FFF7E6",
+          yellow: "#D7B35B", // mustard
+          pink: "#DFA4AF", // dusty pink
+          coral: "#E89A87", // warm coral
+          sky: "#7CB7E8", // sky blue
+          mint: "#93B29B", // sage green
+          soft: "#DCEBF5", // cloud
+          flight: "#A9CDEB", // flight path
+          stamp: "#A8B7A0", // passport stamp
+          cream: "#F6F1E7", // background
+          card2: "#FCFAF7", // card secondary
         },
-        ink: "#2D2D2D",
-        muted: "#6B7280",
-        line: "#E5E7EB",
-        success: "#22C55E",
-        warning: "#F59E0B",
-        danger: "#EF4444",
+        ink: "#2E2E2E",
+        muted: "#7C7C7C",
+        faint: "#A8A8A8",
+        line: "#E8E1D4",
+        success: "#5E9B6E",
+        warning: "#C9A24A",
+        danger: "#D9694F",
       },
       fontFamily: {
         heading: ["var(--font-fredoka)", "system-ui", "sans-serif"],

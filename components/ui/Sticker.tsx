@@ -13,7 +13,7 @@ export function Sticker({
     <div
       style={{ rotate: `${rotate}deg` }}
       className={cn(
-        "inline-flex items-center gap-1 rounded-2xl border-2 border-dashed border-brand-mint bg-mint/10 bg-[#7BD389]/15 px-3 py-2 text-sm font-bold text-ink shadow-soft",
+        "inline-flex items-center gap-1 rounded-2xl border-2 border-dashed border-brand-mint bg-mint/10 bg-[#93B29B]/15 px-3 py-2 text-sm font-bold text-ink shadow-soft",
         className
       )}
     >

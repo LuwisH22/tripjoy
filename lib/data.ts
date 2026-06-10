@@ -90,11 +90,11 @@ export const itinerary: DayCard[] = [
 ];
 
 export const breakdown = [
-  { name: "Transportasi", value: 2_500_000, pct: 29, color: "#6EC6FF" },
-  { name: "Akomodasi", value: 3_000_000, pct: 35, color: "#FF8FA3" },
-  { name: "Makan", value: 1_500_000, pct: 18, color: "#7BD389" },
-  { name: "Aktivitas", value: 1_000_000, pct: 12, color: "#FFD166" },
-  { name: "Lainnya", value: 500_000, pct: 6, color: "#B9E7FF" },
+  { name: "Transportasi", value: 2_500_000, pct: 29, color: "#7CB7E8" },
+  { name: "Akomodasi", value: 3_000_000, pct: 35, color: "#DFA4AF" },
+  { name: "Makan", value: 1_500_000, pct: 18, color: "#93B29B" },
+  { name: "Aktivitas", value: 1_000_000, pct: 12, color: "#D7B35B" },
+  { name: "Lainnya", value: 500_000, pct: 6, color: "#DCEBF5" },
 ];
 
 export type Activity = {
@@ -287,28 +287,28 @@ export const notes: Note[] = [
     id: "n1",
     title: "Packing list 🎒",
     body: "Sunscreen, swimwear, power bank, light clothes, flip flops, reusable bottle.",
-    color: "#FFD166",
+    color: "#D7B35B",
     rotate: -3,
   },
   {
     id: "n2",
     title: "Must-try food 🍜",
     body: "Babi guling, nasi campur, sate lilit, fresh coconut, kopi luwak.",
-    color: "#FF8FA3",
+    color: "#DFA4AF",
     rotate: 2,
   },
   {
     id: "n3",
     title: "Reminders ⏰",
     body: "Book Nusa Penida ferry early. Bring cash for small warungs.",
-    color: "#7BD389",
+    color: "#93B29B",
     rotate: -2,
   },
   {
     id: "n4",
     title: "Photo spots 📸",
     body: "Kelingking Beach, Handara Gate, Lempuyang Temple gates.",
-    color: "#6EC6FF",
+    color: "#7CB7E8",
     rotate: 3,
   },
 ];

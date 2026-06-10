@@ -9,7 +9,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useTripData } from "@/components/trip/TripDataProvider";
 import { type Note } from "@/lib/data";
 
-const palette = ["#FFD166", "#FF8FA3", "#7BD389", "#6EC6FF", "#B9E7FF"];
+const palette = ["#D7B35B", "#DFA4AF", "#93B29B", "#7CB7E8", "#DCEBF5"];
 
 export default function NotesPage() {
   const { isAdmin, guard } = useAuth();

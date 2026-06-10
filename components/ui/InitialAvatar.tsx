@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-const colors = ["#FFD166", "#FF8FA3", "#6EC6FF", "#7BD389", "#B9E7FF"];
+const colors = ["#D7B35B", "#DFA4AF", "#7CB7E8", "#93B29B", "#DCEBF5"];
 
 function colorFor(name: string) {
   let hash = 0;

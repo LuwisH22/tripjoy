@@ -22,11 +22,11 @@ import { useTripData } from "@/components/trip/TripDataProvider";
 import { rupiah } from "@/lib/utils";
 
 const categories = [
-  { name: "Akomodasi", color: "#FF8FA3", emoji: "🏡" },
-  { name: "Transportasi", color: "#6EC6FF", emoji: "🚗" },
-  { name: "Makan", color: "#7BD389", emoji: "🍜" },
-  { name: "Aktivitas", color: "#FFD166", emoji: "🎭" },
-  { name: "Lainnya", color: "#B9E7FF", emoji: "✨" },
+  { name: "Akomodasi", color: "#DFA4AF", emoji: "🏡" },
+  { name: "Transportasi", color: "#7CB7E8", emoji: "🚗" },
+  { name: "Makan", color: "#93B29B", emoji: "🍜" },
+  { name: "Aktivitas", color: "#D7B35B", emoji: "🎭" },
+  { name: "Lainnya", color: "#DCEBF5", emoji: "✨" },
 ];
 
 export default function BudgetPage() {
