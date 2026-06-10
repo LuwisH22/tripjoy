@@ -35,6 +35,22 @@ export type TripState = {
   savingsGoal: number;
 };
 
+const PENDING_KEY = "tripjoy-pending";
+
+/** Apply trip details captured on the "new trip" screen, if they match this code. */
+function applyPending(s: TripState, code: string): TripState {
+  try {
+    const raw = localStorage.getItem(PENDING_KEY);
+    if (!raw) return s;
+    const p = JSON.parse(raw) as { code: string; trip: Partial<TripInfo> };
+    if (p?.code === code && p.trip) {
+      localStorage.removeItem(PENDING_KEY);
+      return { ...s, trip: { ...s.trip, ...p.trip } };
+    }
+  } catch {}
+  return s;
+}
+
 /** A brand-new trip: blank slate with only the creator as a traveler. */
 function emptyState(user: { name: string } | null): TripState {
   return {
@@ -117,8 +133,8 @@ export function TripDataProvider({ children }: { children: React.ReactNode }) {
           // Joining an existing trip — use its data as-is.
           setState({ ...emptyState(user), ...(data.data as TripState) });
         } else {
-          // New trip — seed it with the creator as the first traveler.
-          const fresh = emptyState(user);
+          // New trip — seed it with the creator + any details from the create screen.
+          const fresh = applyPending(emptyState(user), code);
           setState(fresh);
           await supabase
             .from("shared_trips")
@@ -131,7 +147,7 @@ export function TripDataProvider({ children }: { children: React.ReactNode }) {
           setState(
             raw
               ? { ...emptyState(user), ...JSON.parse(raw) }
-              : emptyState(user)
+              : applyPending(emptyState(user), code)
           );
         } catch {
           setState(emptyState(user));
