@@ -14,8 +14,10 @@ export type AppUser = { email: string; name: string };
 type SessionCtx = {
   user: AppUser | null;
   ready: boolean;
-  /** In Supabase mode returns true when a magic link was sent. In local mode signs in immediately. */
-  signIn: (email: string, name: string) => Promise<{ magicLinkSent: boolean }>;
+  /** In Supabase mode emails a 6-digit code (codeSent=true). In local mode signs in immediately. */
+  signIn: (email: string, name: string) => Promise<{ codeSent: boolean }>;
+  /** Verify the 6-digit code the user received by email. Returns true on success. */
+  verifyCode: (email: string, token: string) => Promise<boolean>;
   signOut: () => Promise<void>;
   configured: boolean;
 };
@@ -73,22 +75,29 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(async (email: string, name: string) => {
     if (isSupabaseConfigured && supabase) {
-      await supabase.auth.signInWithOtp({
+      const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: {
-          data: { name },
-          emailRedirectTo:
-            typeof window !== "undefined" ? window.location.origin : undefined,
-        },
+        options: { data: { name }, shouldCreateUser: true },
       });
-      return { magicLinkSent: true };
+      if (error) throw error;
+      return { codeSent: true };
     }
     const u = { email, name };
     try {
       localStorage.setItem(LOCAL_KEY, JSON.stringify(u));
     } catch {}
     setUser(u);
-    return { magicLinkSent: false };
+    return { codeSent: false };
+  }, []);
+
+  const verifyCode = useCallback(async (email: string, token: string) => {
+    if (!(isSupabaseConfigured && supabase)) return true;
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: "email",
+    });
+    return !error;
   }, []);
 
   const signOut = useCallback(async () => {
@@ -104,7 +113,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <Ctx.Provider
-      value={{ user, ready, signIn, signOut, configured: isSupabaseConfigured }}
+      value={{
+        user,
+        ready,
+        signIn,
+        verifyCode,
+        signOut,
+        configured: isSupabaseConfigured,
+      }}
     >
       {children}
     </Ctx.Provider>

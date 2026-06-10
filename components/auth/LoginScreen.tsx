@@ -2,16 +2,17 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, MailCheck, User } from "lucide-react";
+import { ArrowLeft, KeyRound, Mail, MailCheck, User } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useSession } from "./SessionProvider";
 import { Cloud, PlanePath, Sparkle } from "@/components/ui/Doodles";
 
 export function LoginScreen() {
-  const { signIn, configured } = useSession();
+  const { signIn, verifyCode, configured } = useSession();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [sent, setSent] = useState(false);
+  const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -22,10 +23,29 @@ export function LoginScreen() {
       return setError("Please enter a valid email.");
     setLoading(true);
     try {
-      const { magicLinkSent } = await signIn(email.trim(), name.trim());
-      if (magicLinkSent) setSent(true);
+      const { codeSent } = await signIn(email.trim(), name.trim());
+      if (codeSent) setSent(true);
+    } catch (e) {
+      setError(
+        (e as { message?: string })?.message ||
+          "Couldn't send the code. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verify = async () => {
+    setError("");
+    if (code.trim().length < 6)
+      return setError("Enter the 6-digit code from your email.");
+    setLoading(true);
+    try {
+      const ok = await verifyCode(email.trim(), code.trim());
+      if (!ok) setError("That code is wrong or expired. Try again.");
+      // on success, the session updates automatically and the gate opens
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("Couldn't verify the code. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -66,19 +86,59 @@ export function LoginScreen() {
               📬
             </motion.div>
             <h1 className="font-heading text-2xl font-bold text-ink">
-              Check your inbox!
+              Enter your code
             </h1>
             <p className="mt-2 text-sm text-muted">
-              We sent a magic login link to{" "}
-              <span className="font-bold text-ink">{email}</span>. Click it to
-              hop in — see you on the other side ✈️
+              We emailed a 6-digit code to{" "}
+              <span className="font-bold text-ink">{email}</span>. Pop it in
+              below to hop aboard ✈️
             </p>
-            <button
-              onClick={() => setSent(false)}
-              className="mt-5 text-sm font-bold text-brand-sky hover:underline"
-            >
-              Use a different email
-            </button>
+
+            <input
+              value={code}
+              onChange={(e) =>
+                setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+              onKeyDown={(e) => e.key === "Enter" && verify()}
+              inputMode="numeric"
+              autoFocus
+              placeholder="••••••"
+              className="mx-auto mt-5 w-48 rounded-2xl border border-line py-3 text-center font-heading text-2xl font-bold tracking-[0.5em] outline-none focus:border-brand-sky"
+            />
+
+            {error && (
+              <p className="mt-3 text-sm font-bold text-danger">{error}</p>
+            )}
+
+            <Button onClick={verify} className="mt-5 w-full">
+              {loading ? (
+                "Verifying..."
+              ) : (
+                <>
+                  <KeyRound className="h-4 w-4" /> Verify &amp; enter
+                </>
+              )}
+            </Button>
+
+            <div className="mt-4 flex items-center justify-center gap-4 text-sm font-bold">
+              <button
+                onClick={submit}
+                disabled={loading}
+                className="text-brand-sky hover:underline"
+              >
+                Resend code
+              </button>
+              <button
+                onClick={() => {
+                  setSent(false);
+                  setCode("");
+                  setError("");
+                }}
+                className="flex items-center gap-1 text-muted hover:text-ink"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" /> Change email
+              </button>
+            </div>
           </motion.div>
         ) : (
           <>
@@ -133,7 +193,7 @@ export function LoginScreen() {
                   "Sending..."
                 ) : configured ? (
                   <>
-                    <MailCheck className="h-4 w-4" /> Send magic link
+                    <MailCheck className="h-4 w-4" /> Email me a code
                   </>
                 ) : (
                   <>
