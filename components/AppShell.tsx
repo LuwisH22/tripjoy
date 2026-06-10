@@ -1,4 +1,5 @@
 import { Sidebar } from "./Sidebar";
+import { SyncIndicator } from "./ui/SyncIndicator";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -9,6 +10,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </main>
+      <SyncIndicator />
     </div>
   );
 }
