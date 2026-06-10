@@ -30,10 +30,14 @@ export default function TravelersPage() {
   const [amount, setAmount] = useState("");
   const [copied, setCopied] = useState(false);
 
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (typeof window !== "undefined" ? window.location.origin : "");
+
   const inviteLink = invited
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/?invite=${encodeURIComponent(
-        invited.name
-      )}${invited.amountDue ? `&pay=${invited.amountDue}` : ""}`
+    ? `${siteUrl}/?invite=${encodeURIComponent(invited.name)}${
+        invited.amountDue ? `&pay=${invited.amountDue}` : ""
+      }`
     : "";
 
   const copyLink = async () => {
