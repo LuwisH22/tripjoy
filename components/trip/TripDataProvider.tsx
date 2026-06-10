@@ -11,11 +11,6 @@ import {
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { useSession } from "@/components/auth/SessionProvider";
 import {
-  travelers as seedTravelers,
-  itineraryDetail as seedDays,
-  expenses as seedExpenses,
-  notes as seedNotes,
-  trip as seedTrip,
   type Traveler,
   type ItineraryDay,
   type Expense,
@@ -40,46 +35,25 @@ export type TripState = {
   savingsGoal: number;
 };
 
-function defaultState(): TripState {
+/** A brand-new trip: blank slate with only the creator as a traveler. */
+function emptyState(user: { name: string } | null): TripState {
   return {
-    trip: {
-      destination: seedTrip.destination,
-      dates: seedTrip.dates,
-      days: seedTrip.days,
-      image: seedTrip.image,
-    },
-    travelers: seedTravelers,
-    days: seedDays,
-    expenses: seedExpenses,
-    notes: seedNotes,
-    savings: 2_000_000,
-    budgetTotal: 8_500_000,
-    savingsGoal: 3_000_000,
-  };
-}
-
-/** Seed the "You" traveler with the trip creator's name. */
-function personalize(
-  s: TripState,
-  user: { name: string } | null
-): TripState {
-  if (!user) return s;
-  const hasYou = s.travelers.some((t) => t.status === "You");
-  let travelers = s.travelers.map((t) =>
-    t.status === "You" ? { ...t, name: user.name } : t
-  );
-  if (!hasYou) {
-    travelers = [
+    trip: { destination: "", dates: "", days: 0, image: "" },
+    travelers: [
       {
-        name: user.name,
+        name: user?.name ?? "You",
         role: "Trip Planner",
-        status: "You" as const,
+        status: "You",
         avatar: "",
       },
-      ...travelers,
-    ];
-  }
-  return { ...s, travelers };
+    ],
+    days: [],
+    expenses: [],
+    notes: [],
+    savings: 0,
+    budgetTotal: 0,
+    savingsGoal: 0,
+  };
 }
 
 type Upd<T> = T | ((prev: T) => T);
@@ -111,7 +85,7 @@ const LOCAL_KEY = "tripjoy-data";
 
 export function TripDataProvider({ children }: { children: React.ReactNode }) {
   const { user, code } = useSession();
-  const [state, setState] = useState<TripState>(defaultState);
+  const [state, setState] = useState<TripState>(() => emptyState(null));
   const [ready, setReady] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
@@ -141,10 +115,10 @@ export function TripDataProvider({ children }: { children: React.ReactNode }) {
 
         if (!error && data?.data && Object.keys(data.data).length) {
           // Joining an existing trip — use its data as-is.
-          setState({ ...defaultState(), ...(data.data as TripState) });
+          setState({ ...emptyState(user), ...(data.data as TripState) });
         } else {
           // New trip — seed it with the creator as the first traveler.
-          const fresh = personalize(defaultState(), user);
+          const fresh = emptyState(user);
           setState(fresh);
           await supabase
             .from("shared_trips")
@@ -156,11 +130,11 @@ export function TripDataProvider({ children }: { children: React.ReactNode }) {
           const raw = localStorage.getItem(LOCAL_KEY + code);
           setState(
             raw
-              ? { ...defaultState(), ...JSON.parse(raw) }
-              : personalize(defaultState(), user)
+              ? { ...emptyState(user), ...JSON.parse(raw) }
+              : emptyState(user)
           );
         } catch {
-          setState(personalize(defaultState(), user));
+          setState(emptyState(user));
         }
       }
 

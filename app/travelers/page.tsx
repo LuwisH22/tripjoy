@@ -25,7 +25,8 @@ const statusStyle: Record<Traveler["status"], string> = {
 export default function TravelersPage() {
   const { isAdmin, guard } = useAuth();
   const { code } = useSession();
-  const { travelers, addTraveler, removeTraveler } = useTripData();
+  const { state, travelers, addTraveler, removeTraveler } = useTripData();
+  const place = state.trip.destination.split(",")[0];
   const [open, setOpen] = useState(false);
   const [invited, setInvited] = useState<Traveler | null>(null);
   const [name, setName] = useState("");
@@ -90,7 +91,8 @@ export default function TravelersPage() {
       <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-r from-brand-soft/40 to-brand-pink/15 p-6">
         <div className="relative z-10 max-w-md">
           <h3 className="font-heading text-2xl font-bold text-ink">
-            {travelers.length} travelers going to Bali 🌴
+            {travelers.length} {travelers.length === 1 ? "traveler" : "travelers"}{" "}
+            {place ? `going to ${place}` : "on this trip"} 🌴
           </h3>
           <p className="mt-1 text-sm font-semibold text-muted">
             Good vibes &amp; tan lines guaranteed.

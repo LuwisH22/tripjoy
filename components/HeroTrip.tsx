@@ -31,11 +31,17 @@ export function HeroTrip() {
       <PlanePath className="pointer-events-none absolute right-6 top-2 hidden w-44 opacity-80 lg:block" />
 
       <div className="group relative h-48 w-full shrink-0 overflow-hidden rounded-xl2 md:h-auto md:w-72">
-        <img
-          src={trip.image}
-          alt={trip.destination}
-          className="h-full w-full object-cover"
-        />
+        {trip.image ? (
+          <img
+            src={trip.image}
+            alt={trip.destination || "Trip"}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="grid h-full min-h-[12rem] w-full place-items-center bg-gradient-to-br from-brand-soft/50 to-brand-pink/20 text-5xl">
+            🏝️
+          </div>
+        )}
         <Heart className="absolute right-3 top-3 w-6 drop-shadow" />
         {isAdmin && (
           <label className="absolute bottom-2 left-2 cursor-pointer rounded-full bg-white/90 px-3 py-1.5 text-xs font-bold text-ink shadow-soft opacity-0 transition group-hover:opacity-100">
@@ -66,7 +72,8 @@ export function HeroTrip() {
           />
         ) : (
           <h2 className="mt-3 flex items-center gap-2 font-heading text-3xl font-bold text-ink">
-            {trip.destination} <span className="text-2xl">🌴</span>
+            {trip.destination || "Your next trip"}{" "}
+            <span className="text-2xl">🌴</span>
           </h2>
         )}
 
@@ -91,7 +98,9 @@ export function HeroTrip() {
           </div>
         ) : (
           <p className="mt-1 text-sm font-semibold text-muted">
-            {trip.dates} &nbsp;•&nbsp; {trip.days} Days
+            {trip.dates
+              ? `${trip.dates} • ${trip.days} Days`
+              : "Dates not set yet"}
           </p>
         )}
 
