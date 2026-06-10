@@ -58,10 +58,10 @@ function defaultState(): TripState {
   };
 }
 
-/** Make the "You" traveler reflect the logged-in account (name + email). */
+/** Seed the "You" traveler with the trip creator's name. */
 function personalize(
   s: TripState,
-  user: { name: string; email: string } | null
+  user: { name: string } | null
 ): TripState {
   if (!user) return s;
   const hasYou = s.travelers.some((t) => t.status === "You");
@@ -110,63 +110,54 @@ const Ctx = createContext<TripData | null>(null);
 const LOCAL_KEY = "tripjoy-data";
 
 export function TripDataProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useSession();
+  const { user, code } = useSession();
   const [state, setState] = useState<TripState>(defaultState);
   const [ready, setReady] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
-  const userId = useRef<string | null>(null);
   const loaded = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load when a user logs in
+  // Load the trip for the current code
   useEffect(() => {
     let cancelled = false;
     loaded.current = false;
     setReady(false);
 
     async function load() {
-      if (!user) {
+      if (!code || !user) {
         setReady(false);
         return;
       }
 
       if (isSupabaseConfigured && supabase) {
-        const { data: auth } = await supabase.auth.getUser();
-        userId.current = auth.user?.id ?? null;
-
         const { data, error } = await supabase
-          .from("trip_data")
+          .from("shared_trips")
           .select("data")
-          .eq("user_id", userId.current)
+          .eq("code", code)
           .maybeSingle();
 
         if (cancelled) return;
 
         if (!error && data?.data && Object.keys(data.data).length) {
-          setState(
-            personalize({ ...defaultState(), ...(data.data as TripState) }, user)
-          );
+          // Joining an existing trip — use its data as-is.
+          setState({ ...defaultState(), ...(data.data as TripState) });
         } else {
+          // New trip — seed it with the creator as the first traveler.
           const fresh = personalize(defaultState(), user);
           setState(fresh);
-          // seed a row for this user
-          await supabase.from("trip_data").upsert({
-            user_id: userId.current,
-            email: user.email,
-            name: user.name,
-            data: fresh,
-          });
+          await supabase
+            .from("shared_trips")
+            .upsert({ code, data: fresh });
         }
       } else {
-        // local mode
+        // local fallback (no Supabase keys)
         try {
-          const raw = localStorage.getItem(LOCAL_KEY);
+          const raw = localStorage.getItem(LOCAL_KEY + code);
           setState(
-            personalize(
-              raw ? { ...defaultState(), ...JSON.parse(raw) } : defaultState(),
-              user
-            )
+            raw
+              ? { ...defaultState(), ...JSON.parse(raw) }
+              : personalize(defaultState(), user)
           );
         } catch {
           setState(personalize(defaultState(), user));
@@ -183,25 +174,20 @@ export function TripDataProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [code, user]);
 
   // Persist (debounced) on any change after load
   useEffect(() => {
-    if (!loaded.current || !user) return;
+    if (!loaded.current || !code) return;
 
     if (saveTimer.current) clearTimeout(saveTimer.current);
     setSyncing(true);
     saveTimer.current = setTimeout(async () => {
-      if (isSupabaseConfigured && supabase && userId.current) {
-        await supabase.from("trip_data").upsert({
-          user_id: userId.current,
-          email: user.email,
-          name: user.name,
-          data: state,
-        });
+      if (isSupabaseConfigured && supabase) {
+        await supabase.from("shared_trips").upsert({ code, data: state });
       } else {
         try {
-          localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+          localStorage.setItem(LOCAL_KEY + code, JSON.stringify(state));
         } catch {}
       }
       setSyncing(false);
@@ -210,7 +196,7 @@ export function TripDataProvider({ children }: { children: React.ReactNode }) {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-  }, [state, user]);
+  }, [state, code]);
 
   const value: TripData = {
     state,

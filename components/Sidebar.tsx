@@ -12,7 +12,8 @@ import {
   StickyNote,
   Sparkles,
 } from "lucide-react";
-import { LogOut } from "lucide-react";
+import { Check, Copy, LogOut } from "lucide-react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { AccountControl } from "./auth/AccountControl";
 import { useSession } from "./auth/SessionProvider";
@@ -30,8 +31,18 @@ const items = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, signOut } = useSession();
+  const { user, code, signOut } = useSession();
   const firstName = user?.name?.split(" ")[0] ?? "Traveler";
+  const [copied, setCopied] = useState(false);
+
+  const copyCode = async () => {
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+    } catch {}
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   return (
     <aside className="sticky top-0 hidden h-screen w-[260px] shrink-0 flex-col gap-6 border-r border-line bg-white/70 px-5 py-7 lg:flex">
@@ -97,13 +108,34 @@ export function Sidebar() {
 
         <AccountControl />
 
+        {/* Shareable trip code */}
+        <button
+          onClick={copyCode}
+          className="flex items-center gap-2 rounded-2xl border border-brand-soft bg-brand-soft/20 px-3 py-2 text-left transition hover:bg-brand-soft/40"
+        >
+          <span className="text-base">🎟️</span>
+          <div className="min-w-0 flex-1 leading-tight">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-muted">
+              Trip code — tap to copy
+            </p>
+            <p className="font-heading text-base font-bold tracking-widest text-ink">
+              {code}
+            </p>
+          </div>
+          {copied ? (
+            <Check className="h-4 w-4 text-success" />
+          ) : (
+            <Copy className="h-4 w-4 text-muted" />
+          )}
+        </button>
+
         <div className="flex items-center gap-3 rounded-2xl border border-line bg-white p-2.5 shadow-soft">
           <InitialAvatar name={user?.name ?? "?"} className="h-10 w-10 text-lg" />
           <div className="min-w-0 flex-1 leading-tight">
             <p className="truncate text-sm font-bold text-ink">
               Hai, {firstName}! 👋
             </p>
-            <p className="truncate text-xs text-muted">{user?.email}</p>
+            <p className="truncate text-xs text-muted">Traveler</p>
           </div>
           <button
             onClick={() => signOut()}

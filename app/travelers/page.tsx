@@ -10,6 +10,7 @@ import { Modal } from "@/components/ui/Modal";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InitialAvatar } from "@/components/ui/InitialAvatar";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useSession } from "@/components/auth/SessionProvider";
 import { useTripData } from "@/components/trip/TripDataProvider";
 import { type Traveler } from "@/lib/data";
 import { cn, rupiah } from "@/lib/utils";
@@ -23,6 +24,7 @@ const statusStyle: Record<Traveler["status"], string> = {
 
 export default function TravelersPage() {
   const { isAdmin, guard } = useAuth();
+  const { code } = useSession();
   const { travelers, addTraveler, removeTraveler } = useTripData();
   const [open, setOpen] = useState(false);
   const [invited, setInvited] = useState<Traveler | null>(null);
@@ -35,7 +37,7 @@ export default function TravelersPage() {
     (typeof window !== "undefined" ? window.location.origin : "");
 
   const inviteLink = invited
-    ? `${siteUrl}/?invite=${encodeURIComponent(invited.name)}${
+    ? `${siteUrl}/?code=${code ?? ""}&invite=${encodeURIComponent(invited.name)}${
         invited.amountDue ? `&pay=${invited.amountDue}` : ""
       }`
     : "";

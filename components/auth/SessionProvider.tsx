@@ -7,121 +7,73 @@ import {
   useEffect,
   useState,
 } from "react";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
-export type AppUser = { email: string; name: string };
+export type AppUser = { name: string };
 
 type SessionCtx = {
   user: AppUser | null;
+  code: string | null;
   ready: boolean;
-  /** In Supabase mode emails a 6-digit code (codeSent=true). In local mode signs in immediately. */
-  signIn: (email: string, name: string) => Promise<{ codeSent: boolean }>;
-  /** Verify the 6-digit code the user received by email. Returns true on success. */
-  verifyCode: (email: string, token: string) => Promise<boolean>;
-  signOut: () => Promise<void>;
-  configured: boolean;
+  /** Join an existing trip code, or pass an empty code to create a brand-new trip. */
+  signIn: (name: string, code?: string) => { code: string };
+  signOut: () => void;
 };
 
 const Ctx = createContext<SessionCtx | null>(null);
-const LOCAL_KEY = "tripjoy-local-session";
+const KEY = "tripjoy-session";
+
+/** 6-char human-friendly code, no ambiguous chars (0/O, 1/I). */
+function makeCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out = "";
+  for (let i = 0; i < 6; i++)
+    out += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return out;
+}
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
+  const [code, setCode] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    let unsub: (() => void) | undefined;
-
-    if (isSupabaseConfigured && supabase) {
-      supabase.auth.getSession().then(({ data }) => {
-        const s = data.session;
-        if (s?.user) {
-          setUser({
-            email: s.user.email ?? "",
-            name:
-              (s.user.user_metadata?.name as string) ||
-              s.user.email?.split("@")[0] ||
-              "Traveler",
-          });
-        }
-        setReady(true);
-      });
-
-      const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-        if (s?.user) {
-          setUser({
-            email: s.user.email ?? "",
-            name:
-              (s.user.user_metadata?.name as string) ||
-              s.user.email?.split("@")[0] ||
-              "Traveler",
-          });
-        } else {
-          setUser(null);
-        }
-      });
-      unsub = () => sub.subscription.unsubscribe();
-    } else {
-      // Local fallback (no keys yet)
-      try {
-        const raw = localStorage.getItem(LOCAL_KEY);
-        if (raw) setUser(JSON.parse(raw));
-      } catch {}
-      setReady(true);
-    }
-
-    return () => unsub?.();
-  }, []);
-
-  const signIn = useCallback(async (email: string, name: string) => {
-    if (isSupabaseConfigured && supabase) {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { data: { name }, shouldCreateUser: true },
-      });
-      if (error) throw error;
-      return { codeSent: true };
-    }
-    const u = { email, name };
     try {
-      localStorage.setItem(LOCAL_KEY, JSON.stringify(u));
+      const raw = localStorage.getItem(KEY);
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s?.name && s?.code) {
+          setUser({ name: s.name });
+          setCode(s.code);
+        }
+      }
     } catch {}
-    setUser(u);
-    return { codeSent: false };
+    setReady(true);
   }, []);
 
-  const verifyCode = useCallback(async (email: string, token: string) => {
-    if (!(isSupabaseConfigured && supabase)) return true;
-    const { error } = await supabase.auth.verifyOtp({
-      email,
-      token,
-      type: "email",
-    });
-    return !error;
+  const signIn = useCallback((name: string, codeInput?: string) => {
+    const finalCode = (codeInput || "").trim().toUpperCase() || makeCode();
+    const cleanName = name.trim() || "Traveler";
+    setUser({ name: cleanName });
+    setCode(finalCode);
+    try {
+      localStorage.setItem(
+        KEY,
+        JSON.stringify({ name: cleanName, code: finalCode })
+      );
+    } catch {}
+    return { code: finalCode };
   }, []);
 
-  const signOut = useCallback(async () => {
-    if (isSupabaseConfigured && supabase) {
-      await supabase.auth.signOut();
-    } else {
-      try {
-        localStorage.removeItem(LOCAL_KEY);
-      } catch {}
-    }
+  const signOut = useCallback(() => {
     setUser(null);
+    setCode(null);
+    try {
+      localStorage.removeItem(KEY);
+    } catch {}
   }, []);
 
   return (
-    <Ctx.Provider
-      value={{
-        user,
-        ready,
-        signIn,
-        verifyCode,
-        signOut,
-        configured: isSupabaseConfigured,
-      }}
-    >
+    <Ctx.Provider value={{ user, code, ready, signIn, signOut }}>
       {children}
     </Ctx.Provider>
   );

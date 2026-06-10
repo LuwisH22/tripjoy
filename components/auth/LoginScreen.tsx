@@ -2,64 +2,42 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, KeyRound, Mail, MailCheck, User } from "lucide-react";
+import { KeyRound, Plus, Ticket, User } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useSession } from "./SessionProvider";
 import { Cloud, PlanePath, Sparkle } from "@/components/ui/Doodles";
 
 export function LoginScreen() {
-  const { signIn, verifyCode, configured } = useSession();
-  const [email, setEmail] = useState("");
+  const { signIn } = useSession();
   const [name, setName] = useState("");
-  const [sent, setSent] = useState(false);
   const [code, setCode] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [invitedBy, setInvitedBy] = useState("");
 
-  // Prefill name when arriving via an invite link (?invite=Name)
+  // Prefill from an invite link (?code=ABC123 &invite=Name)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const c = params.get("code");
     const inv = params.get("invite");
+    if (c) setCode(c.toUpperCase());
     if (inv) {
       setName(inv);
       setInvitedBy(inv);
     }
   }, []);
 
-  const submit = async () => {
+  const join = () => {
     setError("");
     if (!name.trim()) return setError("Please enter your name.");
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
-      return setError("Please enter a valid email.");
-    setLoading(true);
-    try {
-      const { codeSent } = await signIn(email.trim(), name.trim());
-      if (codeSent) setSent(true);
-    } catch (e) {
-      setError(
-        (e as { message?: string })?.message ||
-          "Couldn't send the code. Please try again."
-      );
-    } finally {
-      setLoading(false);
-    }
+    if (!code.trim())
+      return setError("Enter a trip code, or tap “Start a new trip”.");
+    signIn(name, code);
   };
 
-  const verify = async () => {
+  const create = () => {
     setError("");
-    if (code.trim().length < 6)
-      return setError("Enter the code from your email.");
-    setLoading(true);
-    try {
-      const ok = await verifyCode(email.trim(), code.trim());
-      if (!ok) setError("That code is wrong or expired. Try again.");
-      // on success, the session updates automatically and the gate opens
-    } catch {
-      setError("Couldn't verify the code. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    if (!name.trim()) return setError("Please enter your name first.");
+    signIn(name); // empty code → generates a new one
   };
 
   return (
@@ -83,146 +61,76 @@ export function LoginScreen() {
           <span className="text-2xl">✦</span>
         </div>
 
-        {sent ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center"
+        <h1 className="text-center font-heading text-2xl font-bold text-ink">
+          {invitedBy ? `Welcome, ${invitedBy.split(" ")[0]}! 🎉` : "Welcome aboard! 🌴"}
+        </h1>
+        <p className="mt-1 text-center text-sm text-muted">
+          {invitedBy
+            ? "You've been invited — enter your name to join the trip."
+            : "Enter your name and a trip code to plan together, or start a new trip."}
+        </p>
+
+        <div className="mt-6 space-y-3">
+          <label className="block">
+            <span className="mb-1 block text-sm font-bold text-ink">
+              Your name
+            </span>
+            <div className="flex items-center gap-2 rounded-2xl border border-line px-3 focus-within:border-brand-sky">
+              <User className="h-4 w-4 text-muted" />
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && (code ? join() : create())}
+                placeholder="e.g. Naya Putri"
+                className="w-full bg-transparent py-2.5 font-semibold outline-none"
+              />
+            </div>
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-sm font-bold text-ink">
+              Trip code{" "}
+              <span className="font-normal text-muted">
+                (to join an existing trip)
+              </span>
+            </span>
+            <div className="flex items-center gap-2 rounded-2xl border border-line px-3 focus-within:border-brand-sky">
+              <Ticket className="h-4 w-4 text-muted" />
+              <input
+                value={code}
+                onChange={(e) =>
+                  setCode(e.target.value.toUpperCase().replace(/\s/g, ""))
+                }
+                onKeyDown={(e) => e.key === "Enter" && join()}
+                placeholder="e.g. K7P2QX"
+                className="w-full bg-transparent py-2.5 font-semibold uppercase tracking-widest outline-none"
+              />
+            </div>
+          </label>
+
+          {error && <p className="text-sm font-bold text-danger">{error}</p>}
+
+          <Button onClick={join} className="w-full">
+            <KeyRound className="h-4 w-4" /> Join trip
+          </Button>
+
+          <div className="flex items-center gap-3 py-1">
+            <span className="h-px flex-1 bg-line" />
+            <span className="text-xs font-bold text-muted">OR</span>
+            <span className="h-px flex-1 bg-line" />
+          </div>
+
+          <button
+            onClick={create}
+            className="flex w-full items-center justify-center gap-2 rounded-full border-2 border-brand-mint py-2.5 font-bold text-success transition hover:bg-brand-mint hover:text-white"
           >
-            <motion.div
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 3, repeat: Infinity }}
-              className="mb-3 text-6xl"
-            >
-              📬
-            </motion.div>
-            <h1 className="font-heading text-2xl font-bold text-ink">
-              Enter your code
-            </h1>
-            <p className="mt-2 text-sm text-muted">
-              We emailed a login code to{" "}
-              <span className="font-bold text-ink">{email}</span>. Pop it in
-              below to hop aboard ✈️
-            </p>
+            <Plus className="h-4 w-4" strokeWidth={3} /> Start a new trip
+          </button>
 
-            <input
-              value={code}
-              onChange={(e) =>
-                setCode(e.target.value.replace(/\D/g, "").slice(0, 10))
-              }
-              onKeyDown={(e) => e.key === "Enter" && verify()}
-              inputMode="numeric"
-              autoFocus
-              placeholder="Enter code"
-              className="mx-auto mt-5 w-60 rounded-2xl border border-line py-3 text-center font-heading text-2xl font-bold tracking-[0.35em] outline-none placeholder:text-base placeholder:tracking-normal focus:border-brand-sky"
-            />
-
-            {error && (
-              <p className="mt-3 text-sm font-bold text-danger">{error}</p>
-            )}
-
-            <Button onClick={verify} className="mt-5 w-full">
-              {loading ? (
-                "Verifying..."
-              ) : (
-                <>
-                  <KeyRound className="h-4 w-4" /> Verify &amp; enter
-                </>
-              )}
-            </Button>
-
-            <div className="mt-4 flex items-center justify-center gap-4 text-sm font-bold">
-              <button
-                onClick={submit}
-                disabled={loading}
-                className="text-brand-sky hover:underline"
-              >
-                Resend code
-              </button>
-              <button
-                onClick={() => {
-                  setSent(false);
-                  setCode("");
-                  setError("");
-                }}
-                className="flex items-center gap-1 text-muted hover:text-ink"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" /> Change email
-              </button>
-            </div>
-          </motion.div>
-        ) : (
-          <>
-            <h1 className="text-center font-heading text-2xl font-bold text-ink">
-              {invitedBy ? `Welcome, ${invitedBy.split(" ")[0]}! 🎉` : "Welcome aboard! 🌴"}
-            </h1>
-            <p className="mt-1 text-center text-sm text-muted">
-              {invitedBy
-                ? "You've been invited to a trip — log in with your email to join."
-                : "Log in with your email to plan & sync your trips across devices."}
-            </p>
-
-            <div className="mt-6 space-y-3">
-              <label className="block">
-                <span className="mb-1 block text-sm font-bold text-ink">
-                  Your name
-                </span>
-                <div className="flex items-center gap-2 rounded-2xl border border-line px-3 focus-within:border-brand-sky">
-                  <User className="h-4 w-4 text-muted" />
-                  <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && submit()}
-                    placeholder="e.g. Naya Putri"
-                    className="w-full bg-transparent py-2.5 font-semibold outline-none"
-                  />
-                </div>
-              </label>
-
-              <label className="block">
-                <span className="mb-1 block text-sm font-bold text-ink">
-                  Email
-                </span>
-                <div className="flex items-center gap-2 rounded-2xl border border-line px-3 focus-within:border-brand-sky">
-                  <Mail className="h-4 w-4 text-muted" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && submit()}
-                    placeholder="you@email.com"
-                    className="w-full bg-transparent py-2.5 font-semibold outline-none"
-                  />
-                </div>
-              </label>
-
-              {error && (
-                <p className="text-sm font-bold text-danger">{error}</p>
-              )}
-
-              <Button onClick={submit} className="w-full">
-                {loading ? (
-                  "Sending..."
-                ) : configured ? (
-                  <>
-                    <MailCheck className="h-4 w-4" /> Email me a code
-                  </>
-                ) : (
-                  <>
-                    <MailCheck className="h-4 w-4" /> Continue
-                  </>
-                )}
-              </Button>
-
-              {!configured && (
-                <p className="text-center text-xs text-muted">
-                  Running in local mode — add Supabase keys to enable real email
-                  login &amp; cross-device sync.
-                </p>
-              )}
-            </div>
-          </>
-        )}
+          <p className="text-center text-xs text-muted">
+            Your trip syncs across devices — log in with the same code anywhere.
+          </p>
+        </div>
       </motion.div>
     </div>
   );
