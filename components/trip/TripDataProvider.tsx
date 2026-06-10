@@ -27,6 +27,8 @@ export type TripState = {
   expenses: Expense[];
   notes: Note[];
   savings: number;
+  budgetTotal: number;
+  savingsGoal: number;
 };
 
 function defaultState(): TripState {
@@ -36,6 +38,8 @@ function defaultState(): TripState {
     expenses: seedExpenses,
     notes: seedNotes,
     savings: 2_000_000,
+    budgetTotal: 8_500_000,
+    savingsGoal: 3_000_000,
   };
 }
 
@@ -76,6 +80,8 @@ type TripData = {
   setExpenses: (v: Upd<Expense[]>) => void;
   setNotes: (v: Upd<Note[]>) => void;
   setSavings: (v: Upd<number>) => void;
+  setBudgetTotal: (v: Upd<number>) => void;
+  setSavingsGoal: (v: Upd<number>) => void;
   // convenience for components that read travelers directly
   travelers: Traveler[];
 };
@@ -210,6 +216,10 @@ export function TripDataProvider({ children }: { children: React.ReactNode }) {
     setNotes: (v) => setState((s) => ({ ...s, notes: resolve(v, s.notes) })),
     setSavings: (v) =>
       setState((s) => ({ ...s, savings: resolve(v, s.savings) })),
+    setBudgetTotal: (v) =>
+      setState((s) => ({ ...s, budgetTotal: resolve(v, s.budgetTotal) })),
+    setSavingsGoal: (v) =>
+      setState((s) => ({ ...s, savingsGoal: resolve(v, s.savingsGoal) })),
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

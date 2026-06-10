@@ -3,7 +3,14 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { AlertTriangle, PartyPopper, Plus, Target, Users } from "lucide-react";
+import {
+  AlertTriangle,
+  PartyPopper,
+  Plus,
+  Target,
+  Trash2,
+  Users,
+} from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -12,7 +19,6 @@ import { Confetti } from "@/components/ui/Confetti";
 import { InitialAvatar } from "@/components/ui/InitialAvatar";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useTripData } from "@/components/trip/TripDataProvider";
-import { budget } from "@/lib/data";
 import { rupiah } from "@/lib/utils";
 
 const categories = [
@@ -24,10 +30,19 @@ const categories = [
 ];
 
 export default function BudgetPage() {
-  const { guard } = useAuth();
-  const { state, travelers, setExpenses, setSavings } = useTripData();
+  const { isAdmin, guard } = useAuth();
+  const {
+    state,
+    travelers,
+    setExpenses,
+    setSavings,
+    setBudgetTotal,
+    setSavingsGoal,
+  } = useTripData();
   const list = state.expenses;
   const savings = state.savings;
+  const budgetTotal = state.budgetTotal;
+  const savingsGoal = state.savingsGoal;
   const [open, setOpen] = useState(false);
   const [confetti, setConfetti] = useState(false);
 
@@ -42,9 +57,15 @@ export default function BudgetPage() {
     () => list.reduce((s, e) => s + e.amount, 0),
     [list]
   );
-  const remaining = budget.total - spent;
-  const pct = Math.min(100, Math.round((spent / budget.total) * 100));
-  const overBudget = spent > budget.total;
+  const remaining = budgetTotal - spent;
+  const pct =
+    budgetTotal > 0 ? Math.min(100, Math.round((spent / budgetTotal) * 100)) : 0;
+  const overBudget = spent > budgetTotal;
+
+  const updateExpense = (id: string, patch: Partial<(typeof list)[number]>) =>
+    setExpenses((l) => l.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+  const removeExpense = (id: string) =>
+    setExpenses((l) => l.filter((e) => e.id !== id));
 
   const chartData = categories
     .map((c) => ({
@@ -81,8 +102,10 @@ export default function BudgetPage() {
     0
   );
 
-  const savingsGoal = 3_000_000;
-  const savePct = Math.min(100, Math.round((savings / savingsGoal) * 100));
+  const savePct =
+    savingsGoal > 0
+      ? Math.min(100, Math.round((savings / savingsGoal) * 100))
+      : 0;
 
   const addSavings = () => {
     const next = Math.min(savingsGoal, savings + 500_000);
@@ -120,7 +143,26 @@ export default function BudgetPage() {
 
       {/* planner cards */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Target Budget" value={rupiah(budget.total)} tint="text-ink" />
+        <div className="rounded-xl3 bg-white p-5 shadow-soft">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+            Target Budget {isAdmin && <span className="text-brand-sky">✎</span>}
+          </p>
+          {isAdmin ? (
+            <div className="mt-1 flex items-baseline gap-1">
+              <span className="font-heading text-2xl font-bold text-ink">Rp</span>
+              <input
+                type="number"
+                value={budgetTotal}
+                onChange={(e) => setBudgetTotal(Number(e.target.value) || 0)}
+                className="w-full rounded-lg font-heading text-2xl font-bold text-ink outline-none focus:bg-brand-cream"
+              />
+            </div>
+          ) : (
+            <p className="mt-1 font-heading text-2xl font-bold text-ink">
+              {rupiah(budgetTotal)}
+            </p>
+          )}
+        </div>
         <Stat label="Actual Spending" value={rupiah(spent)} tint="text-brand-pink" />
         <Stat
           label="Remaining"
@@ -190,6 +232,11 @@ export default function BudgetPage() {
         {/* expenses list + split */}
         <section className="rounded-xl3 bg-white p-6 shadow-soft">
           <h3 className="font-heading text-xl font-bold text-ink">Expenses</h3>
+          {list.length === 0 && (
+            <p className="mt-3 rounded-2xl border-2 border-dashed border-line py-6 text-center text-sm font-semibold text-muted">
+              No expenses yet — add one to start tracking 💸
+            </p>
+          )}
           <ul className="mt-3 space-y-2">
             {list.map((e) => (
               <motion.li
@@ -198,18 +245,81 @@ export default function BudgetPage() {
                 animate={{ opacity: 1, x: 0 }}
                 className="flex items-center gap-3 rounded-2xl border border-line bg-white p-3 shadow-soft"
               >
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-cream text-xl">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-cream text-xl">
                   {e.emoji}
                 </span>
-                <div className="flex-1 leading-tight">
-                  <p className="text-sm font-bold text-ink">{e.title}</p>
-                  <p className="text-xs text-muted">
-                    {e.category} • paid by {e.paidBy} • {e.date}
-                  </p>
-                </div>
-                <span className="font-heading font-bold text-ink">
-                  {rupiah(e.amount)}
-                </span>
+                {isAdmin ? (
+                  <div className="flex-1 leading-tight">
+                    <input
+                      value={e.title}
+                      onChange={(ev) =>
+                        updateExpense(e.id, { title: ev.target.value })
+                      }
+                      className="w-full rounded font-bold text-ink outline-none focus:bg-brand-cream"
+                    />
+                    <div className="mt-0.5 flex items-center gap-2 text-xs text-muted">
+                      <select
+                        value={e.category}
+                        onChange={(ev) =>
+                          updateExpense(e.id, {
+                            category: ev.target.value,
+                            emoji:
+                              categories.find((c) => c.name === ev.target.value)
+                                ?.emoji ?? e.emoji,
+                          })
+                        }
+                        className="rounded bg-transparent font-semibold outline-none focus:bg-brand-cream"
+                      >
+                        {categories.map((c) => (
+                          <option key={c.name}>{c.name}</option>
+                        ))}
+                      </select>
+                      <span>•</span>
+                      <select
+                        value={e.paidBy}
+                        onChange={(ev) =>
+                          updateExpense(e.id, { paidBy: ev.target.value })
+                        }
+                        className="rounded bg-transparent font-semibold outline-none focus:bg-brand-cream"
+                      >
+                        {travelers.map((t) => (
+                          <option key={t.name}>{t.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex-1 leading-tight">
+                    <p className="text-sm font-bold text-ink">{e.title}</p>
+                    <p className="text-xs text-muted">
+                      {e.category} • paid by {e.paidBy} • {e.date}
+                    </p>
+                  </div>
+                )}
+                {isAdmin ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      value={e.amount}
+                      onChange={(ev) =>
+                        updateExpense(e.id, {
+                          amount: Number(ev.target.value) || 0,
+                        })
+                      }
+                      className="w-24 rounded text-right font-heading font-bold text-ink outline-none focus:bg-brand-cream"
+                    />
+                    <button
+                      onClick={() => removeExpense(e.id)}
+                      className="rounded-lg p-1.5 text-muted transition hover:bg-brand-pink/15 hover:text-brand-pink"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <span className="font-heading font-bold text-ink">
+                    {rupiah(e.amount)}
+                  </span>
+                )}
               </motion.li>
             ))}
           </ul>
@@ -254,8 +364,22 @@ export default function BudgetPage() {
             <Plus className="h-4 w-4" strokeWidth={3} /> Add {rupiah(500_000)}
           </Button>
         </div>
-        <p className="mt-1 text-sm text-muted">
-          Goal: {rupiah(savingsGoal)} — saved {rupiah(savings)}
+        <p className="mt-1 flex flex-wrap items-center gap-1 text-sm text-muted">
+          Goal:{" "}
+          {isAdmin ? (
+            <>
+              <span className="font-bold text-ink">Rp</span>
+              <input
+                type="number"
+                value={savingsGoal}
+                onChange={(e) => setSavingsGoal(Number(e.target.value) || 0)}
+                className="w-28 rounded font-bold text-ink outline-none focus:bg-brand-cream"
+              />
+            </>
+          ) : (
+            <span className="font-bold text-ink">{rupiah(savingsGoal)}</span>
+          )}{" "}
+          — saved {rupiah(savings)}
         </p>
         <div className="mt-3 h-4 w-full overflow-hidden rounded-full bg-brand-cream">
           <motion.div
