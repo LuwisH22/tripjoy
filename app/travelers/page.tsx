@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, Plus, Trash2, UserPlus } from "lucide-react";
+import { Check, Copy, Mail, Plus, Trash2, UserPlus } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -28,6 +28,29 @@ export default function TravelersPage() {
   const [invited, setInvited] = useState<Traveler | null>(null);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const inviteLink = invited
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/?invite=${encodeURIComponent(
+        invited.name
+      )}${invited.amountDue ? `&pay=${invited.amountDue}` : ""}`
+    : "";
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+    } catch {
+      // fallback for older browsers
+      const el = document.createElement("textarea");
+      el.value = inviteLink;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const invite = () => {
     if (!name.trim()) return;
@@ -197,6 +220,41 @@ export default function TravelersPage() {
                 Now showing on the Budget page 💰
               </p>
             </div>
+
+            {/* Shareable invite link */}
+            <div className="text-left">
+              <p className="mb-1 text-sm font-bold text-ink">Invite link</p>
+              <div className="flex items-center gap-2 rounded-2xl border border-line bg-brand-cream/50 p-2">
+                <input
+                  readOnly
+                  value={inviteLink}
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="min-w-0 flex-1 truncate bg-transparent px-1 text-sm font-semibold text-muted outline-none"
+                />
+                <button
+                  onClick={copyLink}
+                  className={cn(
+                    "flex shrink-0 items-center gap-1 rounded-xl px-3 py-1.5 text-sm font-bold text-white transition",
+                    copied ? "bg-success" : "bg-brand-sky hover:scale-105"
+                  )}
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-4 w-4" /> Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" /> Copy
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="mt-1.5 text-xs text-muted">
+                Share this with {invited.name.split(" ")[0]} so they can join the
+                trip.
+              </p>
+            </div>
+
             <Button onClick={() => setInvited(null)} className="w-full">
               Got it!
             </Button>

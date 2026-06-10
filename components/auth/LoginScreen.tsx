@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, KeyRound, Mail, MailCheck, User } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -15,6 +15,17 @@ export function LoginScreen() {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [invitedBy, setInvitedBy] = useState("");
+
+  // Prefill name when arriving via an invite link (?invite=Name)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const inv = params.get("invite");
+    if (inv) {
+      setName(inv);
+      setInvitedBy(inv);
+    }
+  }, []);
 
   const submit = async () => {
     setError("");
@@ -143,11 +154,12 @@ export function LoginScreen() {
         ) : (
           <>
             <h1 className="text-center font-heading text-2xl font-bold text-ink">
-              Welcome aboard! 🌴
+              {invitedBy ? `Welcome, ${invitedBy.split(" ")[0]}! 🎉` : "Welcome aboard! 🌴"}
             </h1>
             <p className="mt-1 text-center text-sm text-muted">
-              Log in with your email to plan &amp; sync your trips across
-              devices.
+              {invitedBy
+                ? "You've been invited to a trip — log in with your email to join."
+                : "Log in with your email to plan & sync your trips across devices."}
             </p>
 
             <div className="mt-6 space-y-3">
