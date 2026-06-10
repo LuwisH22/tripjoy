@@ -45,6 +45,7 @@ export default function BudgetPage() {
   const savingsGoal = state.savingsGoal;
   const [open, setOpen] = useState(false);
   const [confetti, setConfetti] = useState(false);
+  const [addAmt, setAddAmt] = useState("");
 
   const [form, setForm] = useState({
     title: "",
@@ -107,10 +108,12 @@ export default function BudgetPage() {
       ? Math.min(100, Math.round((savings / savingsGoal) * 100))
       : 0;
 
-  const addSavings = () => {
-    const next = Math.min(savingsGoal, savings + 500_000);
+  const addSavings = (amt: number) => {
+    if (!amt) return;
+    const next = savings + amt;
     setSavings(next);
-    if (next >= savingsGoal) {
+    setAddAmt("");
+    if (savingsGoal > 0 && next >= savingsGoal && savings < savingsGoal) {
       setConfetti(true);
       setTimeout(() => setConfetti(false), 2600);
     }
@@ -360,10 +363,8 @@ export default function BudgetPage() {
           <h3 className="flex items-center gap-2 font-heading text-xl font-bold text-ink">
             <Target className="h-5 w-5 text-brand-mint" /> Savings Tracker
           </h3>
-          <Button variant="outline" onClick={() => guard(addSavings)}>
-            <Plus className="h-4 w-4" strokeWidth={3} /> Add {rupiah(500_000)}
-          </Button>
         </div>
+
         <p className="mt-1 flex flex-wrap items-center gap-1 text-sm text-muted">
           Goal:{" "}
           {isAdmin ? (
@@ -379,8 +380,22 @@ export default function BudgetPage() {
           ) : (
             <span className="font-bold text-ink">{rupiah(savingsGoal)}</span>
           )}{" "}
-          — saved {rupiah(savings)}
+          — saved{" "}
+          {isAdmin ? (
+            <>
+              <span className="font-bold text-success">Rp</span>
+              <input
+                type="number"
+                value={savings}
+                onChange={(e) => setSavings(Number(e.target.value) || 0)}
+                className="w-28 rounded font-bold text-success outline-none focus:bg-brand-cream"
+              />
+            </>
+          ) : (
+            <span className="font-bold text-success">{rupiah(savings)}</span>
+          )}
         </p>
+
         <div className="mt-3 h-4 w-full overflow-hidden rounded-full bg-brand-cream">
           <motion.div
             animate={{ width: `${savePct}%` }}
@@ -388,6 +403,27 @@ export default function BudgetPage() {
             className="h-full rounded-full bg-gradient-to-r from-brand-yellow to-brand-mint"
           />
         </div>
+
+        {/* Add a custom amount to savings */}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1 rounded-2xl border border-line px-3 focus-within:border-brand-mint">
+            <span className="font-bold text-muted">Rp</span>
+            <input
+              type="number"
+              value={addAmt}
+              onChange={(e) => setAddAmt(e.target.value)}
+              onKeyDown={(e) =>
+                e.key === "Enter" && guard(() => addSavings(Number(addAmt)))
+              }
+              placeholder="500.000"
+              className="w-32 bg-transparent py-2.5 font-semibold outline-none"
+            />
+          </div>
+          <Button onClick={() => guard(() => addSavings(Number(addAmt)))}>
+            <Plus className="h-4 w-4" strokeWidth={3} /> Add to savings
+          </Button>
+        </div>
+
         {savePct >= 100 && (
           <p className="mt-3 flex items-center gap-2 font-bold text-success">
             <PartyPopper className="h-5 w-5" /> Goal reached — time to book! 🎉

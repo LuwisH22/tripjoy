@@ -2,11 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { budget } from "@/lib/data";
+import { useTripData } from "@/components/trip/TripDataProvider";
 import { rupiah } from "@/lib/utils";
 
 export function BudgetOverview() {
-  const used = Math.round((budget.spent / budget.total) * 100);
+  const { state } = useTripData();
+  const total = state.budgetTotal;
+  const spent = state.expenses.reduce((s, e) => s + e.amount, 0);
+  const remaining = total - spent;
+  const used = total > 0 ? Math.min(100, Math.round((spent / total) * 100)) : 0;
   const [w, setW] = useState(0);
 
   useEffect(() => {
@@ -25,16 +29,16 @@ export function BudgetOverview() {
         Budget Overview
       </h3>
 
-      <Row label="Total Budget" value={rupiah(budget.total)} />
+      <Row label="Total Budget" value={rupiah(total)} />
       <Row
         label="Total Spent"
-        value={rupiah(budget.spent)}
+        value={rupiah(spent)}
         valueClass="text-success"
       />
       <Row
         label="Remaining"
-        value={rupiah(budget.remaining)}
-        valueClass="text-brand-sky"
+        value={rupiah(remaining)}
+        valueClass={remaining < 0 ? "text-danger" : "text-brand-sky"}
       />
 
       <div className="mt-1">
