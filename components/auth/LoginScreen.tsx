@@ -38,7 +38,7 @@ export function LoginScreen() {
   const verify = async () => {
     setError("");
     if (code.trim().length < 6)
-      return setError("Enter the 6-digit code from your email.");
+      return setError("Enter the code from your email.");
     setLoading(true);
     try {
       const ok = await verifyCode(email.trim(), code.trim());
@@ -89,7 +89,7 @@ export function LoginScreen() {
               Enter your code
             </h1>
             <p className="mt-2 text-sm text-muted">
-              We emailed a 6-digit code to{" "}
+              We emailed a login code to{" "}
               <span className="font-bold text-ink">{email}</span>. Pop it in
               below to hop aboard ✈️
             </p>
@@ -97,13 +97,13 @@ export function LoginScreen() {
             <input
               value={code}
               onChange={(e) =>
-                setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                setCode(e.target.value.replace(/\D/g, "").slice(0, 10))
               }
               onKeyDown={(e) => e.key === "Enter" && verify()}
               inputMode="numeric"
               autoFocus
-              placeholder="••••••"
-              className="mx-auto mt-5 w-48 rounded-2xl border border-line py-3 text-center font-heading text-2xl font-bold tracking-[0.5em] outline-none focus:border-brand-sky"
+              placeholder="Enter code"
+              className="mx-auto mt-5 w-60 rounded-2xl border border-line py-3 text-center font-heading text-2xl font-bold tracking-[0.35em] outline-none placeholder:text-base placeholder:tracking-normal focus:border-brand-sky"
             />
 
             {error && (
