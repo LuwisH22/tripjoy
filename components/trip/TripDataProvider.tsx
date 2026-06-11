@@ -50,7 +50,11 @@ function ensureMember(s: TripState, user: { name: string } | null): TripState {
   // viewer as "Joined" if they were still on an "Invited" status — i.e. they
   // just opened their invite link / joined for the first time.
   let travelers = s.travelers.map((t) => {
-    if (t.status === "You") return { ...t, status: "Organizer" as const };
+    // Organizers never owe a share — clear any stray amount stamped on them.
+    if (t.status === "You")
+      return { ...t, status: "Organizer" as const, amountDue: undefined };
+    if (t.status === "Organizer" && t.amountDue)
+      return { ...t, amountDue: undefined };
     if (t.name.trim().toLowerCase() === me && t.status === "Invited")
       return { ...t, status: "Joined" as const };
     return t;

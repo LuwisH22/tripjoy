@@ -161,7 +161,9 @@ export default function BudgetPage() {
     setOpen(false);
   };
 
-  const payingTravelers = travelers.filter((t) => !!t.amountDue);
+  const payingTravelers = travelers.filter(
+    (t) => !!t.amountDue && t.status !== "Organizer" && t.status !== "You"
+  );
   const travelerDue = payingTravelers.reduce(
     (s, t) => s + (t.amountDue || 0),
     0

@@ -24,32 +24,50 @@ export function PaymentNotice() {
     if (!ready || !code || !user || checked.current) return;
     checked.current = true;
 
+    // Read the invite's pay amount, then immediately drop the invite params
+    // from the URL so a stale ?pay= / ?invite= can't be re-applied on a later
+    // visit or a newly-created trip.
+    let urlPay = 0;
+    try {
+      const url = new URL(window.location.href);
+      urlPay = Number(url.searchParams.get("pay") || 0);
+      if (
+        url.searchParams.has("pay") ||
+        url.searchParams.has("invite") ||
+        url.searchParams.has("code")
+      ) {
+        url.searchParams.delete("pay");
+        url.searchParams.delete("invite");
+        url.searchParams.delete("code");
+        window.history.replaceState({}, "", url.pathname + url.search);
+      }
+    } catch {}
+
     const meName = user.name.trim().toLowerCase();
     const me = state.travelers.find(
       (t) => t.name.trim().toLowerCase() === meName
     );
     if (!me) return;
 
+    // The trip organizer/planner never owes a share — ignore any stale ?pay=
+    // amount that might be lingering in the URL from a previous invite link.
+    if (me.status === "Organizer" || me.status === "You") return;
+
     // If the invite link carried a ?pay= amount and my entry doesn't have one
     // yet, store it on my traveler entry so it syncs for everyone.
     let due = me.amountDue || 0;
-    try {
-      const urlPay = Number(
-        new URLSearchParams(window.location.search).get("pay") || 0
+    if (urlPay > 0 && !due) {
+      due = urlPay;
+      setTravelers((l) =>
+        l.map((t) =>
+          t.name.trim().toLowerCase() === meName
+            ? { ...t, amountDue: urlPay }
+            : t
+        )
       );
-      if (urlPay > 0 && !due) {
-        due = urlPay;
-        setTravelers((l) =>
-          l.map((t) =>
-            t.name.trim().toLowerCase() === meName
-              ? { ...t, amountDue: urlPay }
-              : t
-          )
-        );
-      }
-    } catch {}
+    }
 
-    if (!due || me.status === "Paid" || me.status === "Organizer") return;
+    if (!due || me.status === "Paid") return;
 
     // Only nag once per trip per device.
     const key = `tripjoy-paynotice-${code}`;

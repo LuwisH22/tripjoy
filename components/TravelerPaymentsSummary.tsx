@@ -9,7 +9,9 @@ import { rupiah } from "@/lib/utils";
 
 export function TravelerPaymentsSummary() {
   const { state } = useTripData();
-  const paying = state.travelers.filter((t) => !!t.amountDue);
+  const paying = state.travelers.filter(
+    (t) => !!t.amountDue && t.status !== "Organizer" && t.status !== "You"
+  );
   const expected = paying.reduce((s, t) => s + (t.amountDue || 0), 0);
 
   return (
