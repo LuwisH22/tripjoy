@@ -35,3 +35,12 @@ create policy "trips insert" on public.shared_trips for insert with check (true)
 
 drop policy if exists "trips update" on public.shared_trips;
 create policy "trips update" on public.shared_trips for update using (true);
+
+-- Enable live sync: broadcast row changes to all connected devices via Realtime.
+-- Wrapped so re-running the script doesn't error if the table is already added.
+do $$
+begin
+  alter publication supabase_realtime add table public.shared_trips;
+exception
+  when duplicate_object then null;
+end $$;

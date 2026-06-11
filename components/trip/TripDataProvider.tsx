@@ -122,6 +122,21 @@ function resolve<T>(v: Upd<T>, prev: T): T {
   return typeof v === "function" ? (v as (p: T) => T)(prev) : v;
 }
 
+/**
+ * Order-stable stringify used only to compare trip snapshots. Postgres jsonb
+ * does not preserve object key order, so a plain JSON.stringify would make a
+ * device think its own realtime echo is a remote change. Sorting keys fixes it.
+ */
+function stable(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(stable).join(",")}]`;
+  if (v && typeof v === "object")
+    return `{${Object.keys(v as Record<string, unknown>)
+      .sort()
+      .map((k) => JSON.stringify(k) + ":" + stable((v as Record<string, unknown>)[k]))
+      .join(",")}}`;
+  return JSON.stringify(v);
+}
+
 const Ctx = createContext<TripData | null>(null);
 const LOCAL_KEY = "tripjoy-data";
 
@@ -133,6 +148,11 @@ export function TripDataProvider({ children }: { children: React.ReactNode }) {
 
   const loaded = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Snapshot of the data this device last wrote/received, so realtime echoes
+  // of our own changes are ignored instead of bounced back.
+  const lastSeen = useRef<string>("");
+  // True while applying a remote change, so the save effect doesn't write it back.
+  const applyingRemote = useRef(false);
 
   // Load the trip for the current code
   useEffect(() => {
@@ -157,15 +177,16 @@ export function TripDataProvider({ children }: { children: React.ReactNode }) {
 
         if (!error && data?.data && Object.keys(data.data).length) {
           // Joining an existing trip — add this viewer to the traveler list.
-          setState(
-            ensureMember(
-              { ...emptyState(user), ...(data.data as TripState) },
-              user
-            )
+          const merged = ensureMember(
+            { ...emptyState(user), ...(data.data as TripState) },
+            user
           );
+          lastSeen.current = stable(merged);
+          setState(merged);
         } else {
           // New trip — seed it with the creator + any details from the create screen.
           const fresh = applyPending(emptyState(user), code);
+          lastSeen.current = stable(fresh);
           setState(fresh);
           await supabase
             .from("shared_trips")
@@ -201,9 +222,16 @@ export function TripDataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loaded.current || !code) return;
 
+    // This state change came in from another device — don't echo it back.
+    if (applyingRemote.current) {
+      applyingRemote.current = false;
+      return;
+    }
+
     if (saveTimer.current) clearTimeout(saveTimer.current);
     setSyncing(true);
     saveTimer.current = setTimeout(async () => {
+      lastSeen.current = stable(state);
       if (isSupabaseConfigured && supabase) {
         await supabase.from("shared_trips").upsert({ code, data: state });
       } else {
@@ -218,6 +246,42 @@ export function TripDataProvider({ children }: { children: React.ReactNode }) {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
   }, [state, code]);
+
+  // Live sync: subscribe to changes other devices make to this trip.
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase || !code || !user) return;
+    const client = supabase;
+
+    const channel = client
+      .channel(`trip-${code}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "shared_trips",
+          filter: `code=eq.${code}`,
+        },
+        (payload) => {
+          const incoming = (payload.new as { data?: TripState } | null)?.data;
+          if (!incoming) return;
+          const merged = ensureMember(
+            { ...emptyState(user), ...incoming },
+            user
+          );
+          const sig = stable(merged);
+          if (sig === lastSeen.current) return; // our own change, ignore
+          lastSeen.current = sig;
+          applyingRemote.current = true;
+          setState(merged);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      client.removeChannel(channel);
+    };
+  }, [code, user]);
 
   const value: TripData = {
     state,
