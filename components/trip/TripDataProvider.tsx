@@ -43,14 +43,19 @@ const PENDING_KEY = "tripjoy-pending";
 function ensureMember(s: TripState, user: { name: string } | null): TripState {
   if (!user?.name) return s;
   const me = user.name.trim().toLowerCase();
-  // Migrate any legacy "You" status stored in shared data to "Organizer".
-  let travelers = s.travelers.map((t) =>
-    t.status === "You" ? { ...t, status: "Organizer" as const } : t
-  );
+  // Migrate any legacy "You" status to "Organizer", and mark the current
+  // viewer as "Joined" if they were still on an "Invited" status — i.e. they
+  // just opened their invite link / joined for the first time.
+  let travelers = s.travelers.map((t) => {
+    if (t.status === "You") return { ...t, status: "Organizer" as const };
+    if (t.name.trim().toLowerCase() === me && t.status === "Invited")
+      return { ...t, status: "Joined" as const };
+    return t;
+  });
   if (!travelers.some((t) => t.name.trim().toLowerCase() === me)) {
     travelers = [
       ...travelers,
-      { name: user.name.trim(), role: "Traveler", status: "Pending" as const, avatar: "" },
+      { name: user.name.trim(), role: "Traveler", status: "Joined" as const, avatar: "" },
     ];
   }
   return { ...s, travelers };

@@ -21,6 +21,7 @@ const statusStyle: Record<Traveler["status"], string> = {
   Paid: "bg-brand-mint/25 text-success",
   Pending: "bg-brand-pink/25 text-brand-pink",
   Invited: "bg-brand-soft text-brand-sky",
+  Joined: "bg-brand-mint/25 text-success",
 };
 
 export default function TravelersPage() {
