@@ -26,6 +26,28 @@ import { rupiah } from "@/lib/utils";
 
 const categories = expenseCategories;
 
+/** Compact, branded tooltip for the category donut. */
+function CategoryTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: { name?: string; value?: number; payload?: { color?: string } }[];
+}) {
+  if (!active || !payload?.length) return null;
+  const p = payload[0];
+  return (
+    <div className="flex items-center gap-2 rounded-2xl border border-line bg-white px-3 py-2 text-sm font-bold shadow-float">
+      <span
+        className="h-2.5 w-2.5 shrink-0 rounded-full"
+        style={{ background: p.payload?.color }}
+      />
+      <span className="text-ink">{p.name}</span>
+      <span className="text-muted">{rupiah(p.value ?? 0)}</span>
+    </div>
+  );
+}
+
 export default function BudgetPage() {
   const { isAdmin, guard } = useAuth();
   const { user } = useSession();
@@ -261,7 +283,12 @@ export default function BudgetPage() {
                     <Cell key={c.name} fill={c.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v: number) => rupiah(v)} />
+                <Tooltip
+                  content={<CategoryTooltip />}
+                  cursor={{ fill: "transparent" }}
+                  position={{ y: -14 }}
+                  wrapperStyle={{ outline: "none", zIndex: 30 }}
+                />
               </PieChart>
             </ResponsiveContainer>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
