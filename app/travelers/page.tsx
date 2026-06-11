@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, Copy, Mail, Plus, Trash2, UserPlus } from "lucide-react";
+import { Check, Copy, Mail, Plus, Trash2, UserPlus, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -26,11 +26,27 @@ const statusStyle: Record<Traveler["status"], string> = {
 export default function TravelersPage() {
   const { isAdmin, guard } = useAuth();
   const { code, user } = useSession();
-  const { state, travelers, addTraveler, removeTraveler } = useTripData();
+  const { state, travelers, addTraveler, removeTraveler, setTravelers } =
+    useTripData();
   const isMe = (t: Traveler) =>
     t.name.trim().toLowerCase() === (user?.name ?? "").trim().toLowerCase();
   const shownStatus = (t: Traveler): Traveler["status"] =>
     isMe(t) ? "You" : t.status === "You" ? "Organizer" : t.status;
+  const isOrganizer = (t: Traveler) =>
+    t.status === "Organizer" || t.status === "You";
+
+  const togglePaid = (name: string) =>
+    setTravelers((l) =>
+      l.map((t) =>
+        t.name === name
+          ? { ...t, status: t.status === "Paid" ? "Pending" : "Paid" }
+          : t
+      )
+    );
+
+  const members = travelers.filter((t) => !isOrganizer(t));
+  const paidCount = members.filter((t) => t.status === "Paid").length;
+  const unpaidCount = members.length - paidCount;
   const place = state.trip.destination.split(",")[0];
   const [open, setOpen] = useState(false);
   const [invited, setInvited] = useState<Traveler | null>(null);
@@ -102,6 +118,16 @@ export default function TravelersPage() {
           <p className="mt-1 text-sm font-semibold text-muted">
             Good vibes &amp; tan lines guaranteed.
           </p>
+          {members.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="rounded-full bg-brand-mint/25 px-3 py-1 text-xs font-bold text-success">
+                ✅ {paidCount} paid
+              </span>
+              <span className="rounded-full bg-brand-pink/25 px-3 py-1 text-xs font-bold text-brand-pink">
+                ⏳ {unpaidCount} not paid yet
+              </span>
+            </div>
+          )}
         </div>
         <div className="absolute -right-2 bottom-0 text-7xl md:text-8xl">
           🧳✈️🏝️
@@ -155,8 +181,29 @@ export default function TravelersPage() {
               </span>
               {!!t.amountDue && (
                 <p className="text-xs font-semibold text-muted">
-                  Owes {rupiah(t.amountDue)}
+                  {t.status === "Paid" ? "Paid" : "Owes"} {rupiah(t.amountDue)}
                 </p>
+              )}
+              {isAdmin && !isOrganizer(t) && (
+                <button
+                  onClick={() => guard(() => togglePaid(t.name))}
+                  className={cn(
+                    "mt-1 flex items-center gap-1.5 rounded-full border-2 px-3 py-1.5 text-xs font-bold transition",
+                    t.status === "Paid"
+                      ? "border-line text-muted hover:border-brand-pink hover:text-brand-pink"
+                      : "border-brand-mint text-success hover:bg-brand-mint hover:text-white"
+                  )}
+                >
+                  {t.status === "Paid" ? (
+                    <>
+                      <X className="h-3.5 w-3.5" /> Mark as not paid
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-3.5 w-3.5" /> Mark as paid
+                    </>
+                  )}
+                </button>
               )}
             </motion.div>
           ))}

@@ -1,6 +1,7 @@
 import { Sidebar } from "./Sidebar";
 import { MobileNav } from "./MobileNav";
 import { SyncIndicator } from "./ui/SyncIndicator";
+import { PaymentNotice } from "./trip/PaymentNotice";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -15,6 +16,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       <SyncIndicator />
+      <PaymentNotice />
     </div>
   );
 }
