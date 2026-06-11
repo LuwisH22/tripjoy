@@ -226,6 +226,31 @@ export type Expense = {
   emoji: string;
 };
 
+export const expenseCategories = [
+  { name: "Akomodasi", color: "#DFA4AF", emoji: "🏡" },
+  { name: "Transportasi", color: "#7CB7E8", emoji: "🚗" },
+  { name: "Makan", color: "#93B29B", emoji: "🍜" },
+  { name: "Aktivitas", color: "#D7B35B", emoji: "🎭" },
+  { name: "Lainnya", color: "#DCEBF5", emoji: "✨" },
+];
+
+export type BillItem = {
+  id: string;
+  name: string; // food/drink
+  amount: number;
+  eater: string; // traveler name
+};
+
+export type Bill = {
+  id: string;
+  title: string;
+  bankNumber: string;
+  bankName: string; // account holder name
+  createdBy: string;
+  date: string;
+  items: BillItem[];
+};
+
 export const expenses: Expense[] = [
   {
     id: "e1",

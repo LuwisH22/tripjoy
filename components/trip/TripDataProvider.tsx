@@ -15,6 +15,7 @@ import {
   type ItineraryDay,
   type Expense,
   type Note,
+  type Bill,
 } from "@/lib/data";
 
 export type TripInfo = {
@@ -29,6 +30,7 @@ export type TripState = {
   travelers: Traveler[];
   days: ItineraryDay[];
   expenses: Expense[];
+  bills: Bill[];
   notes: Note[];
   savings: number;
   budgetTotal: number;
@@ -82,6 +84,7 @@ function emptyState(user: { name: string } | null): TripState {
     ],
     days: [],
     expenses: [],
+    bills: [],
     notes: [],
     savings: 0,
     budgetTotal: 0,
@@ -100,6 +103,7 @@ type TripData = {
   removeTraveler: (name: string) => void;
   setDays: (v: Upd<ItineraryDay[]>) => void;
   setExpenses: (v: Upd<Expense[]>) => void;
+  setBills: (v: Upd<Bill[]>) => void;
   setNotes: (v: Upd<Note[]>) => void;
   setSavings: (v: Upd<number>) => void;
   setBudgetTotal: (v: Upd<number>) => void;
@@ -227,6 +231,7 @@ export function TripDataProvider({ children }: { children: React.ReactNode }) {
     setDays: (v) => setState((s) => ({ ...s, days: resolve(v, s.days) })),
     setExpenses: (v) =>
       setState((s) => ({ ...s, expenses: resolve(v, s.expenses) })),
+    setBills: (v) => setState((s) => ({ ...s, bills: resolve(v, s.bills) })),
     setNotes: (v) => setState((s) => ({ ...s, notes: resolve(v, s.notes) })),
     setSavings: (v) =>
       setState((s) => ({ ...s, savings: resolve(v, s.savings) })),

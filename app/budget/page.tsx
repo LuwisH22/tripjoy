@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   PartyPopper,
   Plus,
+  ReceiptText,
   Target,
   Trash2,
   Users,
@@ -18,34 +19,75 @@ import { Modal } from "@/components/ui/Modal";
 import { Confetti } from "@/components/ui/Confetti";
 import { InitialAvatar } from "@/components/ui/InitialAvatar";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useSession } from "@/components/auth/SessionProvider";
 import { useTripData } from "@/components/trip/TripDataProvider";
+import { expenseCategories, type Bill, type BillItem } from "@/lib/data";
 import { rupiah } from "@/lib/utils";
 
-const categories = [
-  { name: "Akomodasi", color: "#DFA4AF", emoji: "🏡" },
-  { name: "Transportasi", color: "#7CB7E8", emoji: "🚗" },
-  { name: "Makan", color: "#93B29B", emoji: "🍜" },
-  { name: "Aktivitas", color: "#D7B35B", emoji: "🎭" },
-  { name: "Lainnya", color: "#DCEBF5", emoji: "✨" },
-];
+const categories = expenseCategories;
 
 export default function BudgetPage() {
   const { isAdmin, guard } = useAuth();
+  const { user } = useSession();
   const {
     state,
     travelers,
     setExpenses,
+    setBills,
     setSavings,
     setBudgetTotal,
     setSavingsGoal,
   } = useTripData();
   const list = state.expenses;
+  const bills = state.bills ?? [];
   const savings = state.savings;
   const budgetTotal = state.budgetTotal;
   const savingsGoal = state.savingsGoal;
   const [open, setOpen] = useState(false);
+  const [billOpen, setBillOpen] = useState(false);
   const [confetti, setConfetti] = useState(false);
   const [addAmt, setAddAmt] = useState("");
+
+  // Split bill form
+  const [billForm, setBillForm] = useState({
+    title: "",
+    bankNumber: "",
+    bankName: "",
+  });
+  const emptyItem = (): BillItem => ({
+    id: crypto.randomUUID(),
+    name: "",
+    amount: 0,
+    eater: travelers[0]?.name ?? "",
+  });
+  const [billItems, setBillItems] = useState<BillItem[]>([emptyItem()]);
+
+  const submitBill = () => {
+    const items = billItems.filter((i) => i.name.trim() && i.amount > 0);
+    if (!billForm.bankNumber.trim() || !billForm.bankName.trim() || !items.length)
+      return;
+    const bill: Bill = {
+      id: crypto.randomUUID(),
+      title: billForm.title.trim() || "Split Bill",
+      bankNumber: billForm.bankNumber.trim(),
+      bankName: billForm.bankName.trim(),
+      createdBy: user?.name ?? "Admin",
+      date: new Date().toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+      }),
+      items,
+    };
+    setBills([bill, ...bills]);
+    setBillForm({ title: "", bankNumber: "", bankName: "" });
+    setBillItems([emptyItem()]);
+    setBillOpen(false);
+  };
+
+  const updateBillItem = (id: string, patch: Partial<BillItem>) =>
+    setBillItems((l) => l.map((i) => (i.id === id ? { ...i, ...patch } : i)));
+  const removeBill = (id: string) =>
+    setBills((l) => l.filter((b) => b.id !== id));
 
   const [form, setForm] = useState({
     title: "",
@@ -127,9 +169,17 @@ export default function BudgetPage() {
         title="Budget"
         subtitle="Track every Rupiah and stay on plan."
         action={
-          <Button onClick={() => guard(() => setOpen(true))}>
-            <Plus className="h-5 w-5" strokeWidth={3} /> Add Expense
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => guard(() => setOpen(true))}>
+              <Plus className="h-5 w-5" strokeWidth={3} /> Add Expense
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => guard(() => setBillOpen(true))}
+            >
+              <ReceiptText className="h-5 w-5" /> Split Bill
+            </Button>
+          </div>
         }
       />
 
@@ -327,35 +377,91 @@ export default function BudgetPage() {
             ))}
           </ul>
 
-          <div className="mt-5 rounded-2xl bg-brand-soft/20 p-4">
-            <p className="mb-2 font-heading font-bold text-ink">
-              💸 Split Bill — {rupiah(Math.round(spent / travelers.length))} each
-            </p>
-            <div className="space-y-1.5">
-              {travelers.map((t) => {
-                const paid = list
-                  .filter((e) => e.paidBy === t.name)
-                  .reduce((s, e) => s + e.amount, 0);
-                const share = spent / travelers.length;
-                const balance = paid - share;
-                return (
-                  <div
-                    key={t.name}
-                    className="flex items-center justify-between text-sm font-semibold"
-                  >
-                    <span className="text-ink">{t.name}</span>
-                    <span className={balance >= 0 ? "text-success" : "text-brand-pink"}>
-                      {balance >= 0
-                        ? `gets back ${rupiah(Math.round(balance))}`
-                        : `owes ${rupiah(Math.round(-balance))}`}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
         </section>
       </div>
+
+      {/* Split bills */}
+      <section className="rounded-xl3 bg-white p-6 shadow-soft">
+        <div className="flex items-center justify-between">
+          <h3 className="flex items-center gap-2 font-heading text-xl font-bold text-ink">
+            <ReceiptText className="h-5 w-5 text-brand-coral" /> Split Bills
+          </h3>
+          <Button variant="outline" onClick={() => guard(() => setBillOpen(true))}>
+            <Plus className="h-4 w-4" strokeWidth={3} /> Split Bill
+          </Button>
+        </div>
+
+        {bills.length === 0 ? (
+          <p className="mt-4 rounded-2xl border-2 border-dashed border-line py-8 text-center text-sm font-semibold text-muted">
+            No bills yet — split a meal or activity and everyone on it gets
+            notified 🔔
+          </p>
+        ) : (
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            {bills.map((b) => {
+              const total = b.items.reduce((s, i) => s + i.amount, 0);
+              const perPerson = new Map<string, number>();
+              b.items.forEach((i) =>
+                perPerson.set(i.eater, (perPerson.get(i.eater) || 0) + i.amount)
+              );
+              return (
+                <div
+                  key={b.id}
+                  className="rounded-2xl border border-line bg-brand-card2 p-4"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-heading font-bold text-ink">
+                        🧾 {b.title}
+                      </p>
+                      <p className="text-xs text-muted">
+                        by {b.createdBy} • {b.date}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-heading font-bold text-ink">
+                        {rupiah(total)}
+                      </span>
+                      {isAdmin && (
+                        <button
+                          onClick={() => removeBill(b.id)}
+                          className="rounded-lg p-1.5 text-muted transition hover:bg-brand-pink/15 hover:text-brand-pink"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <ul className="mt-3 space-y-1 text-sm font-semibold">
+                    {b.items.map((i) => (
+                      <li key={i.id} className="flex justify-between gap-2">
+                        <span className="text-ink">
+                          {i.name}{" "}
+                          <span className="text-muted">— {i.eater}</span>
+                        </span>
+                        <span className="text-muted">{rupiah(i.amount)}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <div className="mt-3 rounded-xl bg-brand-soft/30 p-2.5 text-xs font-semibold">
+                    {[...perPerson.entries()].map(([who, amt]) => (
+                      <div key={who} className="flex justify-between">
+                        <span className="text-ink">{who} owes</span>
+                        <span className="text-brand-sky">{rupiah(amt)}</span>
+                      </div>
+                    ))}
+                    <p className="mt-1.5 border-t border-line pt-1.5 text-muted">
+                      Transfer to {b.bankNumber} ({b.bankName})
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       {/* savings tracker */}
       <section className="relative overflow-hidden rounded-xl3 bg-white p-6 shadow-soft">
@@ -522,6 +628,119 @@ export default function BudgetPage() {
           </button>
           <Button onClick={submit} className="w-full">
             Save Expense
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Split Bill modal */}
+      <Modal
+        open={billOpen}
+        onClose={() => setBillOpen(false)}
+        title="Split a Bill 🧾"
+      >
+        <div className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">
+          <Field label="Bill title">
+            <input
+              value={billForm.title}
+              onChange={(e) =>
+                setBillForm({ ...billForm, title: e.target.value })
+              }
+              placeholder="e.g. Dinner at warung"
+              className="w-full rounded-2xl border border-line px-4 py-2.5 font-semibold outline-none focus:border-brand-sky"
+            />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="M-banking number">
+              <input
+                value={billForm.bankNumber}
+                onChange={(e) =>
+                  setBillForm({ ...billForm, bankNumber: e.target.value })
+                }
+                placeholder="e.g. 1234567890"
+                className="w-full rounded-2xl border border-line px-4 py-2.5 font-semibold outline-none focus:border-brand-sky"
+              />
+            </Field>
+            <Field label="Account name">
+              <input
+                value={billForm.bankName}
+                onChange={(e) =>
+                  setBillForm({ ...billForm, bankName: e.target.value })
+                }
+                placeholder="e.g. Luwis H"
+                className="w-full rounded-2xl border border-line px-4 py-2.5 font-semibold outline-none focus:border-brand-sky"
+              />
+            </Field>
+          </div>
+
+          <div>
+            <span className="mb-1 block text-sm font-bold text-ink">
+              Items — who ate / drank what?
+            </span>
+            <div className="space-y-2">
+              {billItems.map((i) => (
+                <div
+                  key={i.id}
+                  className="flex flex-wrap items-center gap-2 rounded-2xl border border-line p-2"
+                >
+                  <input
+                    value={i.name}
+                    onChange={(e) =>
+                      updateBillItem(i.id, { name: e.target.value })
+                    }
+                    placeholder="🍜 Food / drink"
+                    className="min-w-0 flex-1 rounded-xl px-2 py-1.5 font-semibold outline-none focus:bg-brand-cream"
+                  />
+                  <input
+                    type="number"
+                    value={i.amount || ""}
+                    onChange={(e) =>
+                      updateBillItem(i.id, {
+                        amount: Number(e.target.value) || 0,
+                      })
+                    }
+                    placeholder="Rp"
+                    className="w-24 rounded-xl px-2 py-1.5 font-semibold outline-none focus:bg-brand-cream"
+                  />
+                  <select
+                    value={i.eater}
+                    onChange={(e) =>
+                      updateBillItem(i.id, { eater: e.target.value })
+                    }
+                    className="rounded-xl bg-brand-cream px-2 py-1.5 text-sm font-semibold outline-none"
+                  >
+                    {travelers.map((t) => (
+                      <option key={t.name}>{t.name}</option>
+                    ))}
+                  </select>
+                  {billItems.length > 1 && (
+                    <button
+                      onClick={() =>
+                        setBillItems((l) => l.filter((x) => x.id !== i.id))
+                      }
+                      className="rounded-lg p-1 text-muted hover:text-brand-pink"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setBillItems((l) => [...l, emptyItem()])}
+              className="mt-2 w-full rounded-2xl border-2 border-dashed border-brand-sky/40 py-2 text-sm font-bold text-brand-sky transition hover:bg-brand-soft/30"
+            >
+              + Add item
+            </button>
+          </div>
+
+          <div className="rounded-2xl bg-brand-soft/25 px-4 py-2.5 text-center text-sm font-bold text-ink">
+            Total:{" "}
+            {rupiah(billItems.reduce((s, i) => s + (i.amount || 0), 0))}
+          </div>
+
+          <Button onClick={submitBill} className="w-full">
+            <ReceiptText className="h-4 w-4" /> Create bill & notify everyone
           </Button>
         </div>
       </Modal>

@@ -10,11 +10,23 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import { breakdown } from "@/lib/data";
+import { useTripData } from "@/components/trip/TripDataProvider";
+import { expenseCategories } from "@/lib/data";
 import { rupiah } from "@/lib/utils";
 
 export function BudgetBreakdown() {
-  const total = breakdown.reduce((s, b) => s + b.value, 0);
+  const { state } = useTripData();
+  const total = state.expenses.reduce((s, e) => s + e.amount, 0);
+
+  const chartData = expenseCategories
+    .map((c) => ({
+      name: c.name,
+      color: c.color,
+      value: state.expenses
+        .filter((e) => e.category === c.name)
+        .reduce((s, e) => s + e.amount, 0),
+    }))
+    .filter((c) => c.value > 0);
 
   return (
     <motion.section
@@ -27,58 +39,66 @@ export function BudgetBreakdown() {
         Budget Breakdown
       </h3>
 
-      <div className="mt-4 flex flex-col items-center gap-6 sm:flex-row">
-        <div className="relative h-48 w-48 shrink-0">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={breakdown}
-                dataKey="value"
-                innerRadius={58}
-                outerRadius={90}
-                paddingAngle={3}
-                stroke="none"
-              >
-                {breakdown.map((b) => (
-                  <Cell key={b.name} fill={b.color} />
-                ))}
-              </Pie>
-              <Tooltip
-                formatter={(v: number) => rupiah(v)}
-                contentStyle={{
-                  borderRadius: 16,
-                  border: "1px solid #E5E7EB",
-                  fontFamily: "var(--font-nunito)",
-                  fontWeight: 700,
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-xs font-semibold text-muted">Total</span>
-            <span className="font-heading text-lg font-bold text-ink">
-              {rupiah(total)}
-            </span>
+      {chartData.length === 0 ? (
+        <p className="mt-6 rounded-2xl border-2 border-dashed border-line py-10 text-center text-sm font-semibold text-muted">
+          No expenses yet — add some on the Budget page 💸
+        </p>
+      ) : (
+        <div className="mt-4 flex flex-col items-center gap-6 sm:flex-row">
+          <div className="relative h-48 w-48 shrink-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  dataKey="value"
+                  innerRadius={58}
+                  outerRadius={90}
+                  paddingAngle={3}
+                  stroke="none"
+                >
+                  {chartData.map((b) => (
+                    <Cell key={b.name} fill={b.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(v: number) => rupiah(v)}
+                  contentStyle={{
+                    borderRadius: 16,
+                    border: "1px solid #E8E1D4",
+                    fontFamily: "var(--font-nunito)",
+                    fontWeight: 700,
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-xs font-semibold text-muted">Total</span>
+              <span className="font-heading text-lg font-bold text-ink">
+                {rupiah(total)}
+              </span>
+            </div>
           </div>
-        </div>
 
-        <ul className="flex-1 space-y-2.5">
-          {breakdown.map((b) => (
-            <li
-              key={b.name}
-              className="flex items-center gap-3 text-sm font-semibold"
-            >
-              <span
-                className="h-3 w-3 shrink-0 rounded-full"
-                style={{ background: b.color }}
-              />
-              <span className="flex-1 text-ink">{b.name}</span>
-              <span className="text-muted">{rupiah(b.value)}</span>
-              <span className="w-9 text-right text-ink">{b.pct}%</span>
-            </li>
-          ))}
-        </ul>
-      </div>
+          <ul className="w-full flex-1 space-y-2.5">
+            {chartData.map((b) => (
+              <li
+                key={b.name}
+                className="flex items-center gap-3 text-sm font-semibold"
+              >
+                <span
+                  className="h-3 w-3 shrink-0 rounded-full"
+                  style={{ background: b.color }}
+                />
+                <span className="flex-1 text-ink">{b.name}</span>
+                <span className="text-muted">{rupiah(b.value)}</span>
+                <span className="w-9 text-right text-ink">
+                  {total > 0 ? Math.round((b.value / total) * 100) : 0}%
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <Link
         href="/budget"

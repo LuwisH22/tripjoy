@@ -2,6 +2,7 @@ import { Sidebar } from "./Sidebar";
 import { MobileNav } from "./MobileNav";
 import { SyncIndicator } from "./ui/SyncIndicator";
 import { PaymentNotice } from "./trip/PaymentNotice";
+import { BillNotice } from "./trip/BillNotice";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -17,6 +18,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
       <SyncIndicator />
       <PaymentNotice />
+      <BillNotice />
     </div>
   );
 }
