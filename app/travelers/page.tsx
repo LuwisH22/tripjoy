@@ -17,6 +17,7 @@ import { cn, rupiah } from "@/lib/utils";
 
 const statusStyle: Record<Traveler["status"], string> = {
   You: "bg-brand-yellow text-ink",
+  Organizer: "bg-brand-yellow/40 text-ink",
   Paid: "bg-brand-mint/25 text-success",
   Pending: "bg-brand-pink/25 text-brand-pink",
   Invited: "bg-brand-soft text-brand-sky",
@@ -24,8 +25,12 @@ const statusStyle: Record<Traveler["status"], string> = {
 
 export default function TravelersPage() {
   const { isAdmin, guard } = useAuth();
-  const { code } = useSession();
+  const { code, user } = useSession();
   const { state, travelers, addTraveler, removeTraveler } = useTripData();
+  const isMe = (t: Traveler) =>
+    t.name.trim().toLowerCase() === (user?.name ?? "").trim().toLowerCase();
+  const shownStatus = (t: Traveler): Traveler["status"] =>
+    isMe(t) ? "You" : t.status === "You" ? "Organizer" : t.status;
   const place = state.trip.destination.split(",")[0];
   const [open, setOpen] = useState(false);
   const [invited, setInvited] = useState<Traveler | null>(null);
@@ -125,7 +130,7 @@ export default function TravelersPage() {
               whileHover={{ y: -6 }}
               className="group relative flex flex-col items-center gap-2 rounded-xl3 bg-white p-6 text-center shadow-soft"
             >
-              {isAdmin && t.status !== "You" && (
+              {isAdmin && !isMe(t) && (
                 <button
                   onClick={() => removeTraveler(t.name)}
                   title={`Remove ${t.name}`}
@@ -143,10 +148,10 @@ export default function TravelersPage() {
               <span
                 className={cn(
                   "rounded-full px-3 py-1 text-xs font-bold",
-                  statusStyle[t.status]
+                  statusStyle[shownStatus(t)]
                 )}
               >
-                {t.status}
+                {shownStatus(t)}
               </span>
               {!!t.amountDue && (
                 <p className="text-xs font-semibold text-muted">

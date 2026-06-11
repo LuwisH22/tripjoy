@@ -5,11 +5,13 @@ import { motion } from "framer-motion";
 import { UserPlus, Users } from "lucide-react";
 import { type Traveler } from "@/lib/data";
 import { useTripData } from "@/components/trip/TripDataProvider";
+import { useSession } from "@/components/auth/SessionProvider";
 import { InitialAvatar } from "@/components/ui/InitialAvatar";
 import { cn } from "@/lib/utils";
 
 const statusStyle: Record<Traveler["status"], string> = {
   You: "bg-brand-yellow text-ink",
+  Organizer: "bg-brand-yellow/40 text-ink",
   Paid: "bg-brand-mint/25 text-success",
   Pending: "bg-brand-pink/25 text-brand-pink",
   Invited: "bg-brand-soft text-brand-sky",
@@ -17,6 +19,13 @@ const statusStyle: Record<Traveler["status"], string> = {
 
 export function Travelers() {
   const { travelers } = useTripData();
+  const { user } = useSession();
+  const shownStatus = (t: Traveler): Traveler["status"] =>
+    t.name.trim().toLowerCase() === (user?.name ?? "").trim().toLowerCase()
+      ? "You"
+      : t.status === "You"
+      ? "Organizer"
+      : t.status;
   return (
     <motion.section
       initial={{ opacity: 0, y: 16 }}
@@ -43,10 +52,10 @@ export function Travelers() {
             <span
               className={cn(
                 "rounded-full px-3 py-1 text-xs font-bold",
-                statusStyle[t.status]
+                statusStyle[shownStatus(t)]
               )}
             >
-              {t.status}
+              {shownStatus(t)}
             </span>
           </motion.li>
         ))}

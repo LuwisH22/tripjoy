@@ -37,6 +37,23 @@ export type TripState = {
 
 const PENDING_KEY = "tripjoy-pending";
 
+/** Ensure the current viewer exists in the trip's traveler list (joiners get added). */
+function ensureMember(s: TripState, user: { name: string } | null): TripState {
+  if (!user?.name) return s;
+  const me = user.name.trim().toLowerCase();
+  // Migrate any legacy "You" status stored in shared data to "Organizer".
+  let travelers = s.travelers.map((t) =>
+    t.status === "You" ? { ...t, status: "Organizer" as const } : t
+  );
+  if (!travelers.some((t) => t.name.trim().toLowerCase() === me)) {
+    travelers = [
+      ...travelers,
+      { name: user.name.trim(), role: "Traveler", status: "Pending" as const, avatar: "" },
+    ];
+  }
+  return { ...s, travelers };
+}
+
 /** Apply trip details captured on the "new trip" screen, if they match this code. */
 function applyPending(s: TripState, code: string): TripState {
   try {
@@ -59,7 +76,7 @@ function emptyState(user: { name: string } | null): TripState {
       {
         name: user?.name ?? "You",
         role: "Trip Planner",
-        status: "You",
+        status: "Organizer",
         avatar: "",
       },
     ],
@@ -130,8 +147,13 @@ export function TripDataProvider({ children }: { children: React.ReactNode }) {
         if (cancelled) return;
 
         if (!error && data?.data && Object.keys(data.data).length) {
-          // Joining an existing trip — use its data as-is.
-          setState({ ...emptyState(user), ...(data.data as TripState) });
+          // Joining an existing trip — add this viewer to the traveler list.
+          setState(
+            ensureMember(
+              { ...emptyState(user), ...(data.data as TripState) },
+              user
+            )
+          );
         } else {
           // New trip — seed it with the creator + any details from the create screen.
           const fresh = applyPending(emptyState(user), code);
@@ -146,7 +168,7 @@ export function TripDataProvider({ children }: { children: React.ReactNode }) {
           const raw = localStorage.getItem(LOCAL_KEY + code);
           setState(
             raw
-              ? { ...emptyState(user), ...JSON.parse(raw) }
+              ? ensureMember({ ...emptyState(user), ...JSON.parse(raw) }, user)
               : applyPending(emptyState(user), code)
           );
         } catch {

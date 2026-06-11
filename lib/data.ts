@@ -375,7 +375,7 @@ export const inspirations: Inspo[] = [
 export type Traveler = {
   name: string;
   role: string;
-  status: "You" | "Paid" | "Pending" | "Invited";
+  status: "You" | "Organizer" | "Paid" | "Pending" | "Invited";
   avatar: string;
   amountDue?: number;
 };
