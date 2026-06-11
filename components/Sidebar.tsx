@@ -19,7 +19,7 @@ import { AccountControl } from "./auth/AccountControl";
 import { useSession } from "./auth/SessionProvider";
 import { InitialAvatar } from "./ui/InitialAvatar";
 
-const items = [
+export const navItems = [
   { icon: Home, label: "Dashboard", href: "/" },
   { icon: Map, label: "Itinerary", href: "/itinerary" },
   { icon: Wallet, label: "Budget", href: "/budget" },
@@ -28,6 +28,7 @@ const items = [
   { icon: StickyNote, label: "Notes", href: "/notes" },
   { icon: Sparkles, label: "Inspiration", href: "/inspiration" },
 ];
+const items = navItems;
 
 export function Sidebar() {
   const pathname = usePathname();

@@ -38,14 +38,26 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
+      // A trip code in the URL (invite link) always wins over the saved session.
+      const params = new URLSearchParams(window.location.search);
+      const urlCode = (params.get("code") || "").trim().toUpperCase();
+
       const raw = localStorage.getItem(KEY);
-      if (raw) {
-        const s = JSON.parse(raw);
-        if (s?.name && s?.code) {
-          setUser({ name: s.name });
-          setCode(s.code);
-        }
+      const saved = raw ? JSON.parse(raw) : null;
+
+      if (urlCode && saved?.name && saved?.code !== urlCode) {
+        // Already logged in on this device, but following a link to a different
+        // trip — switch to that trip, keeping the same name.
+        const next = { name: saved.name, code: urlCode };
+        localStorage.setItem(KEY, JSON.stringify(next));
+        setUser({ name: next.name });
+        setCode(next.code);
+      } else if (saved?.name && saved?.code) {
+        setUser({ name: saved.name });
+        setCode(saved.code);
       }
+      // If there's a urlCode but no saved session, the login screen will
+      // prefill the code field and the user joins normally.
     } catch {}
     setReady(true);
   }, []);

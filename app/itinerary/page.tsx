@@ -216,7 +216,7 @@ export default function ItineraryPage() {
                     value={act}
                     dragListener={isAdmin}
                     whileDrag={{ scale: 1.02, boxShadow: "0 18px 50px -18px rgba(45,45,45,0.35)" }}
-                    className="flex items-start gap-3 rounded-2xl border border-line bg-white p-3.5 shadow-soft"
+                    className="flex flex-wrap items-start gap-3 rounded-2xl border border-line bg-white p-3.5 shadow-soft sm:flex-nowrap"
                   >
                     <GripVertical
                       className={cn(
