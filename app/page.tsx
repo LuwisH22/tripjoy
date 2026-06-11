@@ -5,6 +5,8 @@ import { BudgetOverview } from "@/components/BudgetOverview";
 import { ItineraryTimeline } from "@/components/ItineraryTimeline";
 import { BudgetBreakdown } from "@/components/BudgetBreakdown";
 import { Travelers } from "@/components/Travelers";
+import { SplitBillsSummary } from "@/components/SplitBillsSummary";
+import { TravelerPaymentsSummary } from "@/components/TravelerPaymentsSummary";
 import { Sparkle, Cloud } from "@/components/ui/Doodles";
 
 export default function Home() {
@@ -25,6 +27,11 @@ export default function Home() {
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <BudgetBreakdown />
         <Travelers />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SplitBillsSummary />
+        <TravelerPaymentsSummary />
       </div>
 
       <footer className="py-4 text-center text-sm font-semibold text-muted">
