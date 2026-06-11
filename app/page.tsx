@@ -24,13 +24,15 @@ export default function Home() {
 
       <ItineraryTimeline />
 
-      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      {/* Money at a glance */}
+      <div className="grid gap-6 lg:grid-cols-2">
         <BudgetBreakdown />
-        <Travelers />
+        <SplitBillsSummary />
       </div>
 
+      {/* People at a glance */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <SplitBillsSummary />
+        <Travelers />
         <TravelerPaymentsSummary />
       </div>
 

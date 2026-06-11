@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, Image as ImageIcon, Plane } from "lucide-react";
+import { ArrowRight, Image as ImageIcon } from "lucide-react";
 import { useTripData } from "@/components/trip/TripDataProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Sticker } from "./ui/Sticker";
@@ -127,7 +127,7 @@ export function HeroTrip() {
               href="/itinerary"
               className="flex items-center gap-2 rounded-full border-2 border-brand-sky px-5 py-2.5 font-bold text-brand-sky transition hover:bg-brand-sky hover:text-white"
             >
-              Lihat Itinerary <ArrowRight className="h-4 w-4" strokeWidth={3} />
+              View Itinerary <ArrowRight className="h-4 w-4" strokeWidth={3} />
             </Link>
           </motion.div>
           <Sticker rotate={-8} className="hidden sm:inline-flex">
@@ -135,14 +135,6 @@ export function HeroTrip() {
           </Sticker>
         </div>
       </div>
-
-      <motion.div
-        animate={{ x: [0, 8, 0], y: [0, -4, 0] }}
-        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-        className="pointer-events-none absolute right-10 top-6 hidden text-brand-sky lg:block"
-      >
-        <Plane className="h-7 w-7 rotate-12" />
-      </motion.div>
     </motion.div>
   );
 }
