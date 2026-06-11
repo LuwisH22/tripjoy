@@ -21,6 +21,9 @@ import {
 export type TripInfo = {
   destination: string;
   dates: string;
+  /** Machine-readable trip bounds (YYYY-MM-DD) — drives the calendar. */
+  startDate: string;
+  endDate: string;
   days: number;
   image: string;
 };
@@ -78,7 +81,7 @@ function applyPending(s: TripState, code: string): TripState {
 /** A brand-new trip: blank slate with only the creator as a traveler. */
 function emptyState(user: { name: string } | null): TripState {
   return {
-    trip: { destination: "", dates: "", days: 0, image: "" },
+    trip: { destination: "", dates: "", startDate: "", endDate: "", days: 0, image: "" },
     travelers: [
       {
         name: user?.name ?? "You",

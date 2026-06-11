@@ -87,6 +87,8 @@ export function LoginScreen() {
           trip: {
             destination: destination.trim(),
             dates: rangeLabel(startDate, endDate),
+            startDate,
+            endDate,
             days,
           },
         })

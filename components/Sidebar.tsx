@@ -10,7 +10,6 @@ import {
   Users,
   Calendar,
   StickyNote,
-  Sparkles,
 } from "lucide-react";
 import { Check, Copy, LogOut } from "lucide-react";
 import { useState } from "react";
@@ -26,7 +25,6 @@ export const navItems = [
   { icon: Users, label: "Travelers", href: "/travelers" },
   { icon: Calendar, label: "Calendar", href: "/calendar" },
   { icon: StickyNote, label: "Notes", href: "/notes" },
-  { icon: Sparkles, label: "Inspiration", href: "/inspiration" },
 ];
 const items = navItems;
 

@@ -6,12 +6,50 @@ import { Bell, Plus } from "lucide-react";
 import { Cloud, Heart } from "./ui/Doodles";
 import { useAuth } from "./auth/AuthProvider";
 import { useSession } from "./auth/SessionProvider";
+import { useTripData } from "./trip/TripDataProvider";
+
+/** Days from today until a YYYY-MM-DD date (negative if past), or null. */
+function daysUntil(s: string): number | null {
+  if (!s) return null;
+  const [y, m, d] = s.split("-").map(Number);
+  if (!y || !m || !d) return null;
+  const target = new Date(y, m - 1, d);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / 86_400_000);
+}
 
 export function Topbar() {
   const { guard } = useAuth();
   const { user } = useSession();
+  const { state } = useTripData();
   const firstName = user?.name?.split(" ")[0] ?? "there";
   const [bellOpen, setBellOpen] = useState(false);
+
+  // Build live notifications from the real trip data.
+  const notifs: string[] = [];
+
+  // Countdown to the trip.
+  const place = state.trip.destination.split(",")[0];
+  const left = daysUntil(state.trip.startDate);
+  if (left !== null && place) {
+    if (left > 0)
+      notifs.push(`✈️ ${left} ${left === 1 ? "day" : "days"} until your ${place} trip!`);
+    else if (left === 0) notifs.push(`🎉 Your ${place} trip is today!`);
+  }
+
+  // Unpaid travelers (skip organizers and the people already paid).
+  state.travelers
+    .filter(
+      (t) =>
+        t.status !== "Paid" &&
+        t.status !== "Organizer" &&
+        t.status !== "You" &&
+        !!t.amountDue
+    )
+    .forEach((t) =>
+      notifs.push(`💸 ${t.name.split(" ")[0]}'s payment is still pending.`)
+    );
 
   return (
     <div className="relative flex flex-wrap items-start justify-between gap-4">
@@ -50,9 +88,11 @@ export function Topbar() {
             className="relative grid h-12 w-12 place-items-center rounded-full border border-line bg-white shadow-soft transition hover:scale-105"
           >
             <Bell className="h-5 w-5 text-ink" strokeWidth={2.4} />
-            <span className="absolute -right-0.5 -top-0.5 grid h-5 w-5 place-items-center rounded-full bg-brand-pink text-[11px] font-bold text-white">
-              2
-            </span>
+            {notifs.length > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 grid h-5 w-5 place-items-center rounded-full bg-brand-pink text-[11px] font-bold text-white">
+                {notifs.length}
+              </span>
+            )}
           </button>
           <AnimatePresence>
             {bellOpen && (
@@ -66,12 +106,17 @@ export function Topbar() {
                   Notifications
                 </p>
                 <div className="space-y-2 text-sm">
-                  <div className="rounded-xl bg-brand-cream p-2.5">
-                    💸 Kevin&apos;s payment is still pending.
-                  </div>
-                  <div className="rounded-xl bg-brand-cream p-2.5">
-                    ✈️ 15 days until your Bali trip!
-                  </div>
+                  {notifs.length === 0 ? (
+                    <div className="rounded-xl bg-brand-cream p-2.5 text-muted">
+                      🎉 You&apos;re all caught up!
+                    </div>
+                  ) : (
+                    notifs.map((n, i) => (
+                      <div key={i} className="rounded-xl bg-brand-cream p-2.5">
+                        {n}
+                      </div>
+                    ))
+                  )}
                 </div>
               </motion.div>
             )}
