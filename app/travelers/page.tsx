@@ -51,18 +51,31 @@ export default function TravelersPage() {
   const place = state.trip.destination.split(",")[0];
   const [open, setOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
-  const [linkAmount, setLinkAmount] = useState(0);
-  const [amount, setAmount] = useState("");
   const [copied, setCopied] = useState(false);
+  // Payment line items being built for the invite, e.g. { name:"Car", amount:"1000000" }.
+  const [rows, setRows] = useState<{ name: string; amount: string }[]>([
+    { name: "", amount: "" },
+  ]);
+  // Snapshot of the items used to build the current link (after "Create link").
+  const [linkItems, setLinkItems] = useState<
+    { name: string; amount: number }[]
+  >([]);
+  const linkTotal = linkItems.reduce((s, i) => s + i.amount, 0);
 
   const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL ||
     (typeof window !== "undefined" ? window.location.origin : "");
 
-  // The invite link carries only the trip code + (optional) amount owed.
-  // Whoever opens it types their own name on the join screen.
+  // The invite link carries the trip code, the total (?pay=) and, when there's
+  // a breakdown, an encoded item list (?items=) so the joiner sees what it's for.
+  const itemsParam = linkItems.length
+    ? "&items=" +
+      linkItems
+        .map((i) => `${encodeURIComponent(i.name || "Item")}:${i.amount}`)
+        .join(";")
+    : "";
   const inviteLink = `${siteUrl}/?code=${code ?? ""}${
-    linkAmount ? `&pay=${linkAmount}` : ""
+    linkTotal ? `&pay=${linkTotal}${itemsParam}` : ""
   }`;
 
   const copyLink = async () => {
@@ -81,9 +94,21 @@ export default function TravelersPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const addRow = () => setRows((r) => [...r, { name: "", amount: "" }]);
+  const updateRow = (i: number, patch: Partial<{ name: string; amount: string }>) =>
+    setRows((r) => r.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
+  const removeRow = (i: number) =>
+    setRows((r) => (r.length > 1 ? r.filter((_, idx) => idx !== i) : r));
+
+  const rowsTotal = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+
   const invite = () => {
-    setLinkAmount(amount ? Number(amount) : 0);
-    setAmount("");
+    // Keep only rows with a real amount.
+    const items = rows
+      .filter((r) => Number(r.amount) > 0)
+      .map((r) => ({ name: r.name.trim() || "Item", amount: Number(r.amount) }));
+    setLinkItems(items);
+    setRows([{ name: "", amount: "" }]);
     setOpen(false);
     setLinkOpen(true);
   };
@@ -176,6 +201,16 @@ export default function TravelersPage() {
                   {t.status === "Paid" ? "Paid" : "Owes"} {rupiah(t.amountDue)}
                 </p>
               )}
+              {t.paymentItems && t.paymentItems.length > 0 && (
+                <ul className="w-full space-y-0.5 rounded-xl bg-brand-cream/60 px-3 py-2 text-xs font-semibold">
+                  {t.paymentItems.map((it, i) => (
+                    <li key={i} className="flex justify-between gap-2">
+                      <span className="text-ink">{it.name}</span>
+                      <span className="text-muted">{rupiah(it.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
               {isAdmin && !isOrganizer(t) && (
                 <button
                   onClick={() => guard(() => togglePaid(t.name))}
@@ -212,26 +247,64 @@ export default function TravelersPage() {
         </div>
       )}
 
-      {/* Invite modal — admin only sets the amount; joiner enters their own name */}
+      {/* Invite modal — admin builds a payment breakdown; joiner enters their name */}
       <Modal open={open} onClose={() => setOpen(false)} title="Invite Traveler">
         <div className="space-y-3">
-          <label className="block">
-            <span className="mb-1 block text-sm font-bold text-ink">
-              Amount they need to pay (Rp)
+          <span className="block text-sm font-bold text-ink">
+            What do they need to pay for? (optional)
+          </span>
+
+          <div className="space-y-2">
+            {rows.map((row, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input
+                  value={row.name}
+                  onChange={(e) => updateRow(i, { name: e.target.value })}
+                  placeholder="e.g. Car"
+                  className="w-28 shrink-0 rounded-2xl border border-line px-3 py-2.5 text-sm font-semibold outline-none focus:border-brand-sky"
+                />
+                <div className="flex flex-1 items-center gap-1 rounded-2xl border border-line px-3 focus-within:border-brand-sky">
+                  <span className="text-sm font-bold text-muted">Rp</span>
+                  <input
+                    type="number"
+                    value={row.amount}
+                    onChange={(e) => updateRow(i, { amount: e.target.value })}
+                    placeholder="1000000"
+                    className="w-full bg-transparent py-2.5 text-sm font-semibold outline-none"
+                  />
+                </div>
+                {rows.length > 1 && (
+                  <button
+                    onClick={() => removeRow(i)}
+                    title="Remove"
+                    className="shrink-0 rounded-lg p-1.5 text-muted transition hover:bg-brand-pink/15 hover:text-brand-pink"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={addRow}
+            className="flex items-center gap-1.5 text-sm font-bold text-brand-sky transition hover:text-brand-sky/70"
+          >
+            <Plus className="h-4 w-4" strokeWidth={3} /> Add payment
+          </button>
+
+          <div className="flex items-center justify-between rounded-2xl bg-brand-soft/30 px-4 py-3">
+            <span className="text-sm font-bold text-ink">Total</span>
+            <span className="font-heading text-xl font-bold text-brand-sky">
+              {rupiah(rowsTotal)}
             </span>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && invite()}
-              placeholder="e.g. 1500000"
-              className="w-full rounded-2xl border border-line px-4 py-2.5 font-semibold outline-none focus:border-brand-sky"
-            />
-            <span className="mt-1 block text-xs text-muted">
-              Optional — leave blank if they don&apos;t owe anything. They&apos;ll
-              type their own name when they open the link.
-            </span>
-          </label>
+          </div>
+
+          <p className="text-xs text-muted">
+            Leave it all blank if they don&apos;t owe anything. They&apos;ll type
+            their own name when they open the link.
+          </p>
+
           <Button onClick={invite} className="w-full">
             <Mail className="h-4 w-4" /> Create invite link
           </Button>
@@ -248,12 +321,24 @@ export default function TravelersPage() {
           <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-brand-soft/40 text-4xl">
             🔗
           </div>
-          {linkAmount > 0 ? (
-            <div className="rounded-2xl bg-brand-soft/30 p-4">
-              <p className="text-sm font-semibold text-muted">Amount to pay</p>
-              <p className="font-heading text-2xl font-bold text-brand-sky">
-                {rupiah(linkAmount)}
-              </p>
+          {linkTotal > 0 ? (
+            <div className="rounded-2xl bg-brand-soft/30 p-4 text-left">
+              {linkItems.length > 0 && (
+                <ul className="mb-2 space-y-1 text-sm font-semibold">
+                  {linkItems.map((it, i) => (
+                    <li key={i} className="flex justify-between">
+                      <span className="text-ink">{it.name}</span>
+                      <span className="text-muted">{rupiah(it.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="flex items-center justify-between border-t border-line pt-2">
+                <span className="text-sm font-bold text-ink">Total to pay</span>
+                <span className="font-heading text-xl font-bold text-brand-sky">
+                  {rupiah(linkTotal)}
+                </span>
+              </div>
               <p className="mt-1 text-xs text-muted">
                 Charged to whoever joins with this link 💰
               </p>

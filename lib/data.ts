@@ -405,6 +405,8 @@ export type Traveler = {
   status: "You" | "Organizer" | "Paid" | "Pending" | "Invited" | "Joined";
   avatar: string;
   amountDue?: number;
+  /** Optional breakdown of what the amount is for, e.g. [{name:"Car", amount:1000000}]. */
+  paymentItems?: { name: string; amount: number }[];
 };
 
 export const travelers: Traveler[] = [

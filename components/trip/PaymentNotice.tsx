@@ -18,6 +18,7 @@ export function PaymentNotice() {
   const { state, ready, setTravelers } = useTripData();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState(0);
+  const [items, setItems] = useState<{ name: string; amount: number }[]>([]);
   const checked = useRef(false);
 
   useEffect(() => {
@@ -28,15 +29,33 @@ export function PaymentNotice() {
     // from the URL so a stale ?pay= / ?invite= can't be re-applied on a later
     // visit or a newly-created trip.
     let urlPay = 0;
+    let urlItems: { name: string; amount: number }[] = [];
     try {
       const url = new URL(window.location.href);
       urlPay = Number(url.searchParams.get("pay") || 0);
+      // Parse the optional breakdown: "Car:1000000;Hotel:500000".
+      const raw = url.searchParams.get("items");
+      if (raw) {
+        urlItems = raw
+          .split(";")
+          .map((part) => {
+            const idx = part.lastIndexOf(":");
+            if (idx < 0) return null;
+            return {
+              name: decodeURIComponent(part.slice(0, idx)),
+              amount: Number(part.slice(idx + 1)) || 0,
+            };
+          })
+          .filter((x): x is { name: string; amount: number } => !!x);
+      }
       if (
         url.searchParams.has("pay") ||
+        url.searchParams.has("items") ||
         url.searchParams.has("invite") ||
         url.searchParams.has("code")
       ) {
         url.searchParams.delete("pay");
+        url.searchParams.delete("items");
         url.searchParams.delete("invite");
         url.searchParams.delete("code");
         window.history.replaceState({}, "", url.pathname + url.search);
@@ -61,13 +80,20 @@ export function PaymentNotice() {
       setTravelers((l) =>
         l.map((t) =>
           t.name.trim().toLowerCase() === meName
-            ? { ...t, amountDue: urlPay }
+            ? {
+                ...t,
+                amountDue: urlPay,
+                ...(urlItems.length ? { paymentItems: urlItems } : {}),
+              }
             : t
         )
       );
     }
 
     if (!due || me.status === "Paid") return;
+
+    // Prefer the freshly-parsed breakdown, else any already stored on my entry.
+    setItems(urlItems.length ? urlItems : me.paymentItems ?? []);
 
     // Only nag once per trip per device.
     const key = `tripjoy-paynotice-${code}`;
@@ -92,8 +118,18 @@ export function PaymentNotice() {
           in! Here&apos;s your share of the trip:
         </p>
         <div className="rounded-2xl bg-brand-soft/30 p-4">
+          {items.length > 0 && (
+            <ul className="mb-3 space-y-1 text-left text-sm font-semibold">
+              {items.map((it, i) => (
+                <li key={i} className="flex justify-between">
+                  <span className="text-ink">{it.name}</span>
+                  <span className="text-muted">{rupiah(it.amount)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
           <p className="flex items-center justify-center gap-1 text-sm font-semibold text-muted">
-            <Wallet className="h-4 w-4" /> Amount to pay
+            <Wallet className="h-4 w-4" /> {items.length > 0 ? "Total to pay" : "Amount to pay"}
           </p>
           <p className="font-heading text-3xl font-bold text-brand-sky">
             {rupiah(amount)}
