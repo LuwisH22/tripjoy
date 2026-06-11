@@ -21,6 +21,16 @@ const nunito = Nunito({
 export const metadata: Metadata = {
   title: "TripJoy — Plan something amazing",
   description: "A playful travel itinerary & budget planner.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "TripJoy",
+  },
+  icons: {
+    icon: "/icon.png",
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({
@@ -30,6 +40,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${fredoka.variable} ${nunito.variable}`}>
+      <head>
+        <meta name="theme-color" content="#F6F1E7" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="TripJoy" />
+        <link rel="apple-touch-icon" href="/icon.png" />
+      </head>
       <body className="font-body antialiased">
         <SessionProvider>
           <AuthProvider>
