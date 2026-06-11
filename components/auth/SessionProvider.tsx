@@ -41,13 +41,21 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       // A trip code in the URL (invite link) always wins over the saved session.
       const params = new URLSearchParams(window.location.search);
       const urlCode = (params.get("code") || "").trim().toUpperCase();
+      // The name the admin assigned to this invite, if any.
+      const urlInvite = (params.get("invite") || "").trim();
 
       const raw = localStorage.getItem(KEY);
       const saved = raw ? JSON.parse(raw) : null;
 
-      if (urlCode && saved?.name && saved?.code !== urlCode) {
-        // Already logged in on this device, but following a link to a different
-        // trip — switch to that trip, keeping the same name.
+      if (urlCode && urlInvite) {
+        // Named invite link — join as the invited person, even on a device
+        // that's already logged in under a different name. The invite name wins.
+        const next = { name: urlInvite, code: urlCode };
+        localStorage.setItem(KEY, JSON.stringify(next));
+        setUser({ name: next.name });
+        setCode(next.code);
+      } else if (urlCode && saved?.name && saved?.code !== urlCode) {
+        // Unnamed link to a different trip — switch trips, keep the same name.
         const next = { name: saved.name, code: urlCode };
         localStorage.setItem(KEY, JSON.stringify(next));
         setUser({ name: next.name });
@@ -56,8 +64,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setUser({ name: saved.name });
         setCode(saved.code);
       }
-      // If there's a urlCode but no saved session, the login screen will
-      // prefill the code field and the user joins normally.
+      // If there's a urlCode but no saved session and no invite name, the login
+      // screen prefills the code field and the user joins normally.
     } catch {}
     setReady(true);
   }, []);
