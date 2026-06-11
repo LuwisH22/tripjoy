@@ -100,7 +100,7 @@ export function Topbar() {
                 initial={{ opacity: 0, y: -8, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                className="absolute right-0 top-14 z-20 w-64 rounded-2xl border border-line bg-white p-3 shadow-float"
+                className="absolute right-0 top-14 z-30 w-72 max-w-[calc(100vw-2rem)] origin-top-right rounded-2xl border border-line bg-white p-3 shadow-float"
               >
                 <p className="mb-2 font-heading font-bold text-ink">
                   Notifications

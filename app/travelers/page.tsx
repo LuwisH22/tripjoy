@@ -130,7 +130,7 @@ export default function TravelersPage() {
             </div>
           )}
         </div>
-        <div className="absolute -right-2 bottom-0 text-7xl md:text-8xl">
+        <div className="pointer-events-none absolute -right-2 bottom-0 hidden text-7xl sm:block md:text-8xl">
           🧳✈️🏝️
         </div>
       </div>
