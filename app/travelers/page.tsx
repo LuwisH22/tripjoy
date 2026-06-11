@@ -27,7 +27,7 @@ const statusStyle: Record<Traveler["status"], string> = {
 export default function TravelersPage() {
   const { isAdmin, guard } = useAuth();
   const { code, user } = useSession();
-  const { state, travelers, addTraveler, removeTraveler, setTravelers } =
+  const { state, travelers, removeTraveler, setTravelers } =
     useTripData();
   const isMe = (t: Traveler) =>
     t.name.trim().toLowerCase() === (user?.name ?? "").trim().toLowerCase();
@@ -50,8 +50,8 @@ export default function TravelersPage() {
   const unpaidCount = members.length - paidCount;
   const place = state.trip.destination.split(",")[0];
   const [open, setOpen] = useState(false);
-  const [invited, setInvited] = useState<Traveler | null>(null);
-  const [name, setName] = useState("");
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkAmount, setLinkAmount] = useState(0);
   const [amount, setAmount] = useState("");
   const [copied, setCopied] = useState(false);
 
@@ -59,11 +59,11 @@ export default function TravelersPage() {
     process.env.NEXT_PUBLIC_SITE_URL ||
     (typeof window !== "undefined" ? window.location.origin : "");
 
-  const inviteLink = invited
-    ? `${siteUrl}/?code=${code ?? ""}&invite=${encodeURIComponent(invited.name)}${
-        invited.amountDue ? `&pay=${invited.amountDue}` : ""
-      }`
-    : "";
+  // The invite link carries only the trip code + (optional) amount owed.
+  // Whoever opens it types their own name on the join screen.
+  const inviteLink = `${siteUrl}/?code=${code ?? ""}${
+    linkAmount ? `&pay=${linkAmount}` : ""
+  }`;
 
   const copyLink = async () => {
     try {
@@ -82,19 +82,10 @@ export default function TravelersPage() {
   };
 
   const invite = () => {
-    if (!name.trim()) return;
-    const t: Traveler = {
-      name: name.trim(),
-      role: "Traveler",
-      status: "Invited",
-      avatar: "",
-      amountDue: amount ? Number(amount) : 0,
-    };
-    addTraveler(t);
-    setInvited(t);
-    setName("");
+    setLinkAmount(amount ? Number(amount) : 0);
     setAmount("");
     setOpen(false);
+    setLinkOpen(true);
   };
 
   return (
@@ -221,18 +212,9 @@ export default function TravelersPage() {
         </div>
       )}
 
-      {/* Invite modal */}
+      {/* Invite modal — admin only sets the amount; joiner enters their own name */}
       <Modal open={open} onClose={() => setOpen(false)} title="Invite Traveler">
         <div className="space-y-3">
-          <label className="block">
-            <span className="mb-1 block text-sm font-bold text-ink">Name</span>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Rina Wijaya"
-              className="w-full rounded-2xl border border-line px-4 py-2.5 font-semibold outline-none focus:border-brand-sky"
-            />
-          </label>
           <label className="block">
             <span className="mb-1 block text-sm font-bold text-ink">
               Amount they need to pay (Rp)
@@ -241,86 +223,85 @@ export default function TravelersPage() {
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && invite()}
               placeholder="e.g. 1500000"
               className="w-full rounded-2xl border border-line px-4 py-2.5 font-semibold outline-none focus:border-brand-sky"
             />
             <span className="mt-1 block text-xs text-muted">
-              This will be tracked on the Budget page.
+              Optional — leave blank if they don&apos;t owe anything. They&apos;ll
+              type their own name when they open the link.
             </span>
           </label>
           <Button onClick={invite} className="w-full">
-            <Mail className="h-4 w-4" /> Send Invite
+            <Mail className="h-4 w-4" /> Create invite link
           </Button>
         </div>
       </Modal>
 
-      {/* Invite confirmation popup */}
+      {/* Invite link popup */}
       <Modal
-        open={!!invited}
-        onClose={() => setInvited(null)}
-        title="Invitation Sent! 🎉"
+        open={linkOpen}
+        onClose={() => setLinkOpen(false)}
+        title="Invite link ready! 🎉"
       >
-        {invited && (
-          <div className="space-y-4 text-center">
-            <InitialAvatar
-              name={invited.name}
-              className="mx-auto h-20 w-20 text-3xl"
-            />
-            <div>
-              <p className="font-heading text-lg font-bold text-ink">
-                {invited.name}
-              </p>
-              <p className="text-sm text-muted">has been invited as a Traveler</p>
-            </div>
+        <div className="space-y-4 text-center">
+          <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-brand-soft/40 text-4xl">
+            🔗
+          </div>
+          {linkAmount > 0 ? (
             <div className="rounded-2xl bg-brand-soft/30 p-4">
               <p className="text-sm font-semibold text-muted">Amount to pay</p>
               <p className="font-heading text-2xl font-bold text-brand-sky">
-                {rupiah(invited.amountDue || 0)}
+                {rupiah(linkAmount)}
               </p>
               <p className="mt-1 text-xs text-muted">
-                Now showing on the Budget page 💰
+                Charged to whoever joins with this link 💰
               </p>
             </div>
+          ) : (
+            <p className="text-sm text-muted">
+              No amount attached — they just join the trip.
+            </p>
+          )}
 
-            {/* Shareable invite link */}
-            <div className="text-left">
-              <p className="mb-1 text-sm font-bold text-ink">Invite link</p>
-              <div className="flex items-center gap-2 rounded-2xl border border-line bg-brand-cream/50 p-2">
-                <input
-                  readOnly
-                  value={inviteLink}
-                  onFocus={(e) => e.currentTarget.select()}
-                  className="min-w-0 flex-1 truncate bg-transparent px-1 text-sm font-semibold text-muted outline-none"
-                />
-                <button
-                  onClick={copyLink}
-                  className={cn(
-                    "flex shrink-0 items-center gap-1 rounded-xl px-3 py-1.5 text-sm font-bold text-white transition",
-                    copied ? "bg-success" : "bg-brand-sky hover:scale-105"
-                  )}
-                >
-                  {copied ? (
-                    <>
-                      <Check className="h-4 w-4" /> Copied
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-4 w-4" /> Copy
-                    </>
-                  )}
-                </button>
-              </div>
-              <p className="mt-1.5 text-xs text-muted">
-                Share this with {invited.name.split(" ")[0]} so they can join the
-                trip.
-              </p>
+          {/* Shareable invite link */}
+          <div className="text-left">
+            <p className="mb-1 text-sm font-bold text-ink">Invite link</p>
+            <div className="flex items-center gap-2 rounded-2xl border border-line bg-brand-cream/50 p-2">
+              <input
+                readOnly
+                value={inviteLink}
+                onFocus={(e) => e.currentTarget.select()}
+                className="min-w-0 flex-1 truncate bg-transparent px-1 text-sm font-semibold text-muted outline-none"
+              />
+              <button
+                onClick={copyLink}
+                className={cn(
+                  "flex shrink-0 items-center gap-1 rounded-xl px-3 py-1.5 text-sm font-bold text-white transition",
+                  copied ? "bg-success" : "bg-brand-sky hover:scale-105"
+                )}
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4" /> Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" /> Copy
+                  </>
+                )}
+              </button>
             </div>
-
-            <Button onClick={() => setInvited(null)} className="w-full">
-              Got it!
-            </Button>
+            <p className="mt-1.5 text-xs text-muted">
+              Share this — your friend opens it and enters their own name to
+              join the trip.
+            </p>
           </div>
-        )}
+
+          <Button onClick={() => setLinkOpen(false)} className="w-full">
+            Got it!
+          </Button>
+        </div>
       </Modal>
     </AppShell>
   );
