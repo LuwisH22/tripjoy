@@ -106,6 +106,8 @@ export type Activity = {
   transport: string;
   priority: "High" | "Medium" | "Low";
   note?: string;
+  /** Optional cost of this activity in Rupiah (blank/0 = free). */
+  amount?: number;
 };
 
 export type ItineraryDay = {

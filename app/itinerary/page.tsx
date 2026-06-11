@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useTripData } from "@/components/trip/TripDataProvider";
 import { type Activity } from "@/lib/data";
-import { cn } from "@/lib/utils";
+import { cn, rupiah } from "@/lib/utils";
 
 const priorityStyle: Record<Activity["priority"], string> = {
   High: "bg-brand-pink/20 text-brand-pink",
@@ -42,6 +42,15 @@ export default function ItineraryPage() {
         activities: [],
       },
     ]);
+  };
+
+  const deleteDay = (dayIdx: number) => {
+    setDays((prev) =>
+      prev
+        .filter((_, i) => i !== dayIdx)
+        // Renumber the remaining days so they stay sequential.
+        .map((d, i) => ({ ...d, day: i + 1 }))
+    );
   };
 
   const setActivities = (dayIdx: number, acts: Activity[]) => {
@@ -143,12 +152,30 @@ export default function ItineraryPage() {
                   <p className="text-sm font-semibold text-muted">{day.date}</p>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                onClick={() => guard(() => addActivity(dayIdx))}
-              >
-                <Plus className="h-4 w-4" strokeWidth={3} /> Activity
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => guard(() => addActivity(dayIdx))}
+                >
+                  <Plus className="h-4 w-4" strokeWidth={3} /> Activity
+                </Button>
+                {isAdmin && (
+                  <button
+                    onClick={() =>
+                      guard(() => {
+                        if (
+                          confirm(`Delete Day ${day.day} and its activities?`)
+                        )
+                          deleteDay(dayIdx);
+                      })
+                    }
+                    title={`Delete Day ${day.day}`}
+                    className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-line text-muted transition hover:border-brand-pink hover:bg-brand-pink/10 hover:text-brand-pink"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Day photo (polaroid) */}
@@ -305,6 +332,30 @@ export default function ItineraryPage() {
                           />
                         ) : (
                           <span>{act.transport}</span>
+                        )}
+                        {isAdmin ? (
+                          <span className="flex items-center gap-1 rounded bg-brand-cream px-1.5 text-brand-mint">
+                            <span className="font-bold text-success">Rp</span>
+                            <input
+                              type="number"
+                              value={act.amount ?? ""}
+                              placeholder="0"
+                              onChange={(e) =>
+                                updateActivity(dayIdx, act.id, {
+                                  amount: e.target.value
+                                    ? Number(e.target.value)
+                                    : undefined,
+                                })
+                              }
+                              className="w-20 bg-transparent font-bold text-success outline-none placeholder:text-success/40"
+                            />
+                          </span>
+                        ) : (
+                          !!act.amount && (
+                            <span className="rounded-full bg-brand-mint/20 px-2 py-0.5 font-bold text-success">
+                              {rupiah(act.amount)}
+                            </span>
+                          )
                         )}
                       </div>
                       {isAdmin ? (
