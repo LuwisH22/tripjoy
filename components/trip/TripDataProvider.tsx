@@ -38,6 +38,10 @@ export type TripState = {
   savings: number;
   budgetTotal: number;
   savingsGoal: number;
+  /** Optional cost to split evenly among travelers (0 = off). */
+  splitCost: number;
+  /** Minimum number of people to divide the split cost by ("including me"). */
+  expectedTravelers: number;
 };
 
 const PENDING_KEY = "tripjoy-pending";
@@ -101,6 +105,8 @@ function emptyState(user: { name: string } | null): TripState {
     savings: 0,
     budgetTotal: 0,
     savingsGoal: 0,
+    splitCost: 0,
+    expectedTravelers: 0,
   };
 }
 
@@ -120,6 +126,8 @@ type TripData = {
   setSavings: (v: Upd<number>) => void;
   setBudgetTotal: (v: Upd<number>) => void;
   setSavingsGoal: (v: Upd<number>) => void;
+  setSplitCost: (v: Upd<number>) => void;
+  setExpectedTravelers: (v: Upd<number>) => void;
   setTrip: (v: Upd<TripInfo>) => void;
   // convenience for components that read travelers directly
   travelers: Traveler[];
@@ -290,6 +298,35 @@ export function TripDataProvider({ children }: { children: React.ReactNode }) {
     };
   }, [code, user]);
 
+  // Auto-split: when a split cost + expected count are set, divide the cost by
+  // max(expected, actual travelers) — "never below the number you input" — and
+  // set each non-organizer traveler's owed amount. Recalculates as people join.
+  useEffect(() => {
+    if (!loaded.current) return;
+    const cost = state.splitCost ?? 0;
+    const expected = state.expectedTravelers ?? 0;
+    if (cost <= 0 || expected <= 0) return;
+
+    const isOrg = (t: Traveler) =>
+      t.status === "Organizer" || t.status === "You";
+    // Divisor counts everyone incl. the organizer ("including me"), but never
+    // fewer than the expected number.
+    const divisor = Math.max(expected, state.travelers.length);
+    const per = Math.round(cost / divisor);
+
+    const needsUpdate = state.travelers.some(
+      (t) => !isOrg(t) && t.amountDue !== per
+    );
+    if (!needsUpdate) return;
+
+    setState((s) => ({
+      ...s,
+      travelers: s.travelers.map((t) =>
+        isOrg(t) ? t : { ...t, amountDue: per, paymentItems: undefined }
+      ),
+    }));
+  }, [state.splitCost, state.expectedTravelers, state.travelers]);
+
   const value: TripData = {
     state,
     ready,
@@ -315,6 +352,13 @@ export function TripDataProvider({ children }: { children: React.ReactNode }) {
       setState((s) => ({ ...s, budgetTotal: resolve(v, s.budgetTotal) })),
     setSavingsGoal: (v) =>
       setState((s) => ({ ...s, savingsGoal: resolve(v, s.savingsGoal) })),
+    setSplitCost: (v) =>
+      setState((s) => ({ ...s, splitCost: resolve(v, s.splitCost) })),
+    setExpectedTravelers: (v) =>
+      setState((s) => ({
+        ...s,
+        expectedTravelers: resolve(v, s.expectedTravelers),
+      })),
     setTrip: (v) => setState((s) => ({ ...s, trip: resolve(v, s.trip) })),
   };
 

@@ -59,6 +59,8 @@ export default function BudgetPage() {
     setSavings,
     setBudgetTotal,
     setSavingsGoal,
+    setSplitCost,
+    setExpectedTravelers,
   } = useTripData();
   const list = state.expenses;
   const bills = state.bills ?? [];
@@ -164,6 +166,15 @@ export default function BudgetPage() {
   const payingTravelers = travelers.filter(
     (t) => !!t.amountDue && t.status !== "Organizer" && t.status !== "You"
   );
+
+  // Auto-split preview: divide the split cost by max(expected, actual count).
+  const splitCost = state.splitCost ?? 0;
+  const expectedTravelers = state.expectedTravelers ?? 0;
+  const splitDivisor = Math.max(expectedTravelers, travelers.length);
+  const perPerson =
+    splitCost > 0 && splitDivisor > 0
+      ? Math.round(splitCost / splitDivisor)
+      : 0;
   const travelerDue = payingTravelers.reduce(
     (s, t) => s + (t.amountDue || 0),
     0
@@ -562,6 +573,74 @@ export default function BudgetPage() {
         {savePct >= 100 && (
           <p className="mt-3 flex items-center gap-2 font-bold text-success">
             <PartyPopper className="h-5 w-5" /> Goal reached — time to book! 🎉
+          </p>
+        )}
+      </section>
+
+      {/* Split a cost evenly among travelers */}
+      <section className="rounded-xl3 bg-white p-6 shadow-soft">
+        <h3 className="flex items-center gap-2 font-heading text-xl font-bold text-ink">
+          <Users className="h-5 w-5 text-brand-mint" /> Split a Cost Evenly
+        </h3>
+        <p className="mt-1 text-sm text-muted">
+          Divide a cost among everyone (including you). If more than your
+          expected number join, it auto-divides again — but never by fewer.
+        </p>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-1 block text-sm font-bold text-ink">
+              Total cost to split (Rp)
+            </span>
+            <input
+              type="number"
+              value={splitCost || ""}
+              disabled={!isAdmin}
+              onChange={(e) =>
+                guard(() => setSplitCost(Number(e.target.value) || 0))
+              }
+              placeholder="e.g. 6000000"
+              className="w-full rounded-2xl border border-line px-4 py-2.5 font-semibold outline-none focus:border-brand-mint disabled:opacity-60"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-bold text-ink">
+              Expected travelers (incl. you)
+            </span>
+            <input
+              type="number"
+              value={expectedTravelers || ""}
+              disabled={!isAdmin}
+              onChange={(e) =>
+                guard(() => setExpectedTravelers(Number(e.target.value) || 0))
+              }
+              placeholder="e.g. 6"
+              className="w-full rounded-2xl border border-line px-4 py-2.5 font-semibold outline-none focus:border-brand-mint disabled:opacity-60"
+            />
+          </label>
+        </div>
+
+        {splitCost > 0 && expectedTravelers > 0 ? (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-brand-mint/15 p-4">
+            <div>
+              <p className="text-sm font-semibold text-muted">
+                {rupiah(splitCost)} ÷ {splitDivisor}{" "}
+                {splitDivisor === 1 ? "person" : "people"}
+                {travelers.length > expectedTravelers
+                  ? " (more joined)"
+                  : ""}
+              </p>
+              <p className="font-heading text-2xl font-bold text-success">
+                {rupiah(perPerson)} <span className="text-base">each</span>
+              </p>
+            </div>
+            <span className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-success shadow-soft">
+              Applied to every traveler ✓
+            </span>
+          </div>
+        ) : (
+          <p className="mt-4 rounded-2xl border-2 border-dashed border-line py-6 text-center text-sm font-semibold text-muted">
+            Enter a cost and an expected headcount to split it automatically 🧮
           </p>
         )}
       </section>
